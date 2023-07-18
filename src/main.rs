@@ -66,6 +66,7 @@ async fn main() -> types::Result<()> {
                     continue 'inner;
                 }
             };
+            println!("{:#?}", error);
             let should_reconnect = matches!(
                 error.kind(),
                 ReceiveMessageErrorType::FatallyClosed {

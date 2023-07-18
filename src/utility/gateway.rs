@@ -20,8 +20,8 @@ pub async fn connect(
 ) -> Result<Vec<Shard>> {
     let intents = Intents::GUILDS | Intents::GUILD_MEMBERS | Intents::GUILD_VOICE_STATES;
     let event_types = EventTypeFlags::CHANNEL_CREATE
+        | EventTypeFlags::CHANNEL_CREATE
         | EventTypeFlags::CHANNEL_DELETE
-        | EventTypeFlags::CHANNEL_UPDATE
         | EventTypeFlags::GATEWAY_HEARTBEAT
         | EventTypeFlags::GATEWAY_HEARTBEAT_ACK
         | EventTypeFlags::GATEWAY_HELLO
@@ -34,12 +34,9 @@ pub async fn connect(
         | EventTypeFlags::MEMBER_ADD
         | EventTypeFlags::MEMBER_CHUNK
         | EventTypeFlags::MEMBER_REMOVE
-        | EventTypeFlags::MEMBER_UPDATE
         | EventTypeFlags::MESSAGE_CREATE
         | EventTypeFlags::READY
-        | EventTypeFlags::ROLE_CREATE
         | EventTypeFlags::ROLE_DELETE
-        | EventTypeFlags::ROLE_UPDATE
         | EventTypeFlags::UNAVAILABLE_GUILD
         | EventTypeFlags::VOICE_STATE_UPDATE;
     let config = Config::builder(BOT_TOKEN.to_owned(), intents)

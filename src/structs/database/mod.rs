@@ -1,3 +1,6 @@
+mod guild;
+mod member;
+
 use std::str::FromStr;
 
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
@@ -12,7 +15,21 @@ impl Database {
     pub async fn create_tables(&self) -> Result<()> {
         let client = self.pool.get().await?;
         let statement = "
-            SELECT VERSION();
+            -- guild table
+            CREATE TABLE IF NOT EXISTS public.guild (
+                guild_id INT8 NOT NULL PRIMARY KEY,
+                xp_multiplier INT2 NOT NULL DEFAULT 1
+            );
+
+            -- member table
+            CREATE TABLE IF NOT EXISTS public.member (
+                guild_id INT8 NOT NULL,
+                user_id INT8 NOT NULL,
+                xp INT8 NOT NULL DEFAULT 0,
+                last_message_timestamp TIMESTAMP WITH TIME ZONE,
+                owned_role_ids INT8[] NOT NULL DEFAULT '{}',
+                PRIMARY KEY (guild_id, user_id)
+            )
         ";
 
         client.batch_execute(statement).await?;
