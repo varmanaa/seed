@@ -1,14 +1,11 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashSet, sync::Arc};
 
 use parking_lot::RwLock;
 use time::OffsetDateTime;
 use twilight_model::{
-    guild::Guild as TwilightGuild,
+    channel::Channel as TwilightChannel,
     id::{
-        marker::{ChannelMarker, GuildMarker, UserMarker},
+        marker::{ChannelMarker, GuildMarker, RoleMarker, UserMarker},
         Id,
     },
 };
@@ -27,18 +24,17 @@ impl Cache {
 
     pub fn insert_guild(
         &self,
-        guild: TwilightGuild,
-        database_members: HashMap<Id<UserMarker>, Option<OffsetDateTime>>,
+        channels: Vec<TwilightChannel>,
+        guild_id: Id<GuildMarker>,
+        levels: Vec<(u8, HashSet<Id<RoleMarker>>)>,
+        members: Vec<(
+            Id<UserMarker>,
+            Option<OffsetDateTime>,
+            Option<Id<ChannelMarker>>,
+        )>,
+        name: String,
         xp_multiplier: i64,
     ) {
-        let TwilightGuild {
-            channels,
-            id: guild_id,
-            members,
-            name,
-            voice_states,
-            ..
-        } = guild;
         let mut channel_ids: HashSet<Id<ChannelMarker>> = HashSet::new();
         let mut member_ids: HashSet<Id<UserMarker>> = HashSet::new();
 
@@ -48,18 +44,10 @@ impl Cache {
             self.insert_channel(channel);
         }
 
-        for member in members {
-            let now = OffsetDateTime::now_utc();
-            let user_id = member.user.id;
-            let last_message_timestamp =
-                database_members.get(&user_id).cloned().unwrap_or_default();
-            let voice_channel_id = voice_states
-                .iter()
-                .find(|voice_state| voice_state.user_id.eq(&user_id))
-                .map_or(None, |voice_state| voice_state.channel_id);
-            let joined_voice_timestamp = voice_channel_id.map(|_| now);
-
+        for (user_id, last_message_timestamp, voice_channel_id) in members {
             member_ids.insert(user_id);
+
+            let joined_voice_timestamp = voice_channel_id.map(|_| OffsetDateTime::now_utc());
 
             self.insert_member(
                 guild_id,
@@ -67,7 +55,7 @@ impl Cache {
                 joined_voice_timestamp,
                 last_message_timestamp,
                 voice_channel_id,
-            );
+            )
         }
 
         self.guilds.write().insert(
@@ -75,6 +63,7 @@ impl Cache {
             Arc::new(Guild {
                 channel_ids: RwLock::new(channel_ids),
                 guild_id,
+                levels: RwLock::new(levels),
                 member_ids: RwLock::new(member_ids),
                 name,
                 xp_multiplier: RwLock::new(xp_multiplier),
@@ -104,6 +93,7 @@ impl Cache {
             return
         };
         let current_guild_channel_ids = current_guild.channel_ids.read().clone();
+        let current_guild_levels = current_guild.levels.read().clone();
         let current_guild_member_ids = current_guild.member_ids.read().clone();
         let current_guild_xp_multiplier = current_guild.xp_multiplier.read().clone();
 
@@ -112,6 +102,7 @@ impl Cache {
             Arc::new(Guild {
                 channel_ids: RwLock::new(update.channel_ids.unwrap_or(current_guild_channel_ids)),
                 guild_id,
+                levels: RwLock::new(update.levels.unwrap_or(current_guild_levels)),
                 member_ids: RwLock::new(update.member_ids.unwrap_or(current_guild_member_ids)),
                 name: update.name.unwrap_or(current_guild.name.clone()),
                 xp_multiplier: RwLock::new(

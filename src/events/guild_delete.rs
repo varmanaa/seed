@@ -11,6 +11,7 @@ pub async fn handle_guild_delete(
     let guild_id = payload.id;
 
     context.database.remove_guild(guild_id).await?;
+    context.database.remove_guild_levels(guild_id).await?;
     context.cache.remove_guild(guild_id, payload.unavailable);
 
     Ok(())

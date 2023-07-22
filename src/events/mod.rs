@@ -9,6 +9,7 @@ mod member_chunk;
 mod member_remove;
 mod message_create;
 mod ready;
+mod role_delete;
 mod unavailable_guild;
 mod voice_state_update;
 
@@ -29,6 +30,7 @@ use self::{
     member_remove::handle_member_remove,
     message_create::handle_message_create,
     ready::handle_ready,
+    role_delete::handle_role_delete,
     unavailable_guild::handle_unavailable_guild,
     voice_state_update::handle_voice_state_update,
 };
@@ -45,6 +47,7 @@ pub async fn handle_event(
         Event::ChannelDelete(payload) => handle_channel_delete(context, *payload),
         Event::GuildCreate(payload) => {
             shard_sender.command(&RequestGuildMembers::builder(payload.0.id).query("", None))?;
+
             handle_guild_create(context, *payload).await
         }
         Event::GuildDelete(payload) => handle_guild_delete(context, payload).await,
@@ -57,6 +60,7 @@ pub async fn handle_event(
         Event::MemberRemove(payload) => handle_member_remove(context, payload).await,
         Event::MessageCreate(payload) => handle_message_create(context, *payload).await,
         Event::Ready(payload) => handle_ready(context, *payload),
+        Event::RoleDelete(payload) => handle_role_delete(context, payload).await,
         Event::UnavailableGuild(payload) => handle_unavailable_guild(context, payload),
         Event::VoiceStateUpdate(payload) => handle_voice_state_update(context, *payload).await,
         _ => Ok(()),

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use time::OffsetDateTime;
 use tokio_postgres::types::ToSql;
 use twilight_model::id::{
@@ -13,7 +11,7 @@ impl Database {
     pub async fn get_members(
         &self,
         guild_id: Id<GuildMarker>,
-    ) -> Result<HashMap<Id<UserMarker>, Option<OffsetDateTime>>> {
+    ) -> Result<Vec<(Id<UserMarker>, Option<OffsetDateTime>)>> {
         let client = self.pool.get().await?;
         let statement = "
             SELECT
@@ -25,15 +23,17 @@ impl Database {
                 guild_id = $1;
         ";
         let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64)];
-        let mut members: HashMap<Id<UserMarker>, Option<OffsetDateTime>> = HashMap::new();
-        let rows = client.query(statement, params).await.unwrap_or_default();
-
-        for row in rows {
-            members.insert(
-                Id::<UserMarker>::new(row.get::<_, i64>("user_id") as u64),
-                row.get::<_, Option<OffsetDateTime>>("last_message_timestamp"),
-            );
-        }
+        let members = client
+            .query(statement, params)
+            .await?
+            .into_iter()
+            .map(|row| {
+                (
+                    Id::<UserMarker>::new(row.get::<_, i64>("user_id") as u64),
+                    row.get::<_, Option<OffsetDateTime>>("last_message_timestamp"),
+                )
+            })
+            .collect();
 
         Ok(members)
     }

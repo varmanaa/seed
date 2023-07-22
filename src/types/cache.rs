@@ -6,7 +6,7 @@ use std::{
 use parking_lot::RwLock;
 use time::OffsetDateTime;
 use twilight_model::id::{
-    marker::{ChannelMarker, GuildMarker, UserMarker},
+    marker::{ChannelMarker, GuildMarker, RoleMarker, UserMarker},
     Id,
 };
 
@@ -31,6 +31,7 @@ pub struct ChannelUpdate {
 pub struct Guild {
     pub channel_ids: RwLock<HashSet<Id<ChannelMarker>>>,
     pub guild_id: Id<GuildMarker>,
+    pub levels: RwLock<Vec<(u8, HashSet<Id<RoleMarker>>)>>,
     pub member_ids: RwLock<HashSet<Id<UserMarker>>>,
     pub name: String,
     pub xp_multiplier: RwLock<i64>,
@@ -38,9 +39,10 @@ pub struct Guild {
 
 #[derive(Default)]
 pub struct GuildUpdate {
+    pub channel_ids: Option<HashSet<Id<ChannelMarker>>>,
+    pub levels: Option<Vec<(u8, HashSet<Id<RoleMarker>>)>>,
     pub member_ids: Option<HashSet<Id<UserMarker>>>,
     pub name: Option<String>,
-    pub channel_ids: Option<HashSet<Id<ChannelMarker>>>,
     pub xp_multiplier: Option<i64>,
 }
 

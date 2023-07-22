@@ -1,4 +1,5 @@
 mod guild;
+mod level;
 mod member;
 
 use std::str::FromStr;
@@ -19,6 +20,14 @@ impl Database {
             CREATE TABLE IF NOT EXISTS public.guild (
                 guild_id INT8 NOT NULL PRIMARY KEY,
                 xp_multiplier INT8 NOT NULL DEFAULT 1
+            );
+
+            -- level table
+            CREATE TABLE IF NOT EXISTS public.level (
+                guild_id INT8 NOT NULL,
+                level INT2 NOT NULL,
+                role_ids INT8[] NOT NULL DEFAULT '{}'::INT8[],
+                PRIMARY KEY (guild_id, level)
             );
 
             -- member table
