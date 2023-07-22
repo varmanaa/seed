@@ -47,18 +47,19 @@ async fn main() -> types::Result<()> {
             let error = match stream.next().await {
                 None => return Ok(()),
                 Some((_, Err(error))) => error,
-                Some((shard_ref, Ok(event))) => {
-                    let shard_id = shard_ref.id().number();
+                Some((shard, Ok(event))) => {
+                    let shard_id = shard.id().number();
+                    let shard_sender = shard.sender();
 
                     context
                         .latencies
                         .write()
-                        .insert(shard_id, Arc::new(shard_ref.latency().clone()));
+                        .insert(shard_id, Arc::new(shard.latency().clone()));
 
                     let event_context = Arc::clone(&context);
 
                     tokio::spawn(async move {
-                        events::handle_event(event_context, shard_id, event)
+                        events::handle_event(event_context, shard_id, shard_sender, event)
                             .await
                             .unwrap()
                     });

@@ -14,7 +14,8 @@ mod voice_state_update;
 
 use std::sync::Arc;
 
-use twilight_gateway::Event;
+use twilight_gateway::{Event, MessageSender};
+use twilight_model::gateway::payload::outgoing::RequestGuildMembers;
 
 use self::{
     channel_create::handle_channel_create,
@@ -36,12 +37,16 @@ use crate::types::{context::Context, Result};
 pub async fn handle_event(
     context: Arc<Context>,
     shard_id: u64,
+    shard_sender: MessageSender,
     event: Event,
 ) -> Result<()> {
     match event {
         Event::ChannelCreate(payload) => handle_channel_create(context, *payload),
         Event::ChannelDelete(payload) => handle_channel_delete(context, *payload),
-        Event::GuildCreate(payload) => handle_guild_create(context, *payload).await,
+        Event::GuildCreate(payload) => {
+            shard_sender.command(&RequestGuildMembers::builder(payload.0.id).query("", None))?;
+            handle_guild_create(context, *payload).await
+        }
         Event::GuildDelete(payload) => handle_guild_delete(context, payload).await,
         Event::GuildUpdate(payload) => handle_guild_update(context, *payload),
         Event::InteractionCreate(payload) => {

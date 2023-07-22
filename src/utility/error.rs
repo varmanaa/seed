@@ -19,9 +19,11 @@ pub enum Error {
     #[error("Unable to parse integer")]
     ParseInt(#[from] std::num::ParseIntError),
     #[error("Unable to parse interaction options")]
-    ParseError(#[from] twilight_interactions::error::ParseError),
+    Parse(#[from] twilight_interactions::error::ParseError),
     #[error("Unable to retrieve object from pool")]
     PoolObject(#[from] deadpool_postgres::PoolError),
+    #[error("Unable to fetch members from gateway")]
+    Send(#[from] twilight_gateway::error::SendError),
     #[error("Unable to fetch recommended number of shards to use")]
     StartRecommended(#[from] twilight_gateway::stream::StartRecommendedError),
     #[error("TokioPostgres error")]
