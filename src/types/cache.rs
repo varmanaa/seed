@@ -6,7 +6,7 @@ use std::{
 use parking_lot::RwLock;
 use time::OffsetDateTime;
 use twilight_model::id::{
-    marker::{ChannelMarker, GuildMarker, RoleMarker, UserMarker},
+    marker::{ChannelMarker, GuildMarker, UserMarker},
     Id,
 };
 
@@ -48,7 +48,6 @@ pub struct Member {
     pub guild_id: Id<GuildMarker>,
     pub joined_voice_timestamp: RwLock<Option<OffsetDateTime>>,
     pub last_message_timestamp: RwLock<Option<OffsetDateTime>>,
-    pub owned_role_ids: RwLock<HashSet<Id<RoleMarker>>>,
     pub user_id: Id<UserMarker>,
     pub voice_channel_id: RwLock<Option<Id<ChannelMarker>>>,
 }
@@ -57,6 +56,5 @@ pub struct Member {
 pub struct MemberUpdate {
     pub joined_voice_timestamp: Option<Option<OffsetDateTime>>,
     pub last_message_timestamp: Option<Option<OffsetDateTime>>,
-    pub owned_role_ids: Option<HashSet<Id<RoleMarker>>>,
     pub voice_channel_id: Option<Option<Id<ChannelMarker>>>,
 }

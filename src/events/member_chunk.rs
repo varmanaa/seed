@@ -12,17 +12,11 @@ pub async fn handle_member_chunk(
 
     for member in payload.members {
         let user_id = member.user.id;
-        let (last_message_timestamp, owned_role_ids) =
-            context.database.insert_member(guild_id, user_id).await?;
+        let last_message_timestamp = context.database.insert_member(guild_id, user_id).await?;
 
-        context.cache.insert_member(
-            guild_id,
-            user_id,
-            None,
-            last_message_timestamp,
-            owned_role_ids,
-            None,
-        );
+        context
+            .cache
+            .insert_member(guild_id, user_id, None, last_message_timestamp, None);
     }
 
     Ok(())

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use twilight_model::gateway::payload::incoming::GuildDelete;
 
@@ -11,10 +11,6 @@ pub async fn handle_guild_delete(
     let guild_id = payload.id;
 
     context.database.remove_guild(guild_id).await?;
-    context
-        .database
-        .update_member_owned_role_ids(guild_id, None, HashSet::new())
-        .await?;
     context.cache.remove_guild(guild_id, payload.unavailable);
 
     Ok(())

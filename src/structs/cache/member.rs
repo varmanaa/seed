@@ -1,9 +1,9 @@
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use parking_lot::RwLock;
 use time::OffsetDateTime;
 use twilight_model::id::{
-    marker::{ChannelMarker, GuildMarker, RoleMarker, UserMarker},
+    marker::{ChannelMarker, GuildMarker, UserMarker},
     Id,
 };
 
@@ -26,7 +26,6 @@ impl Cache {
         user_id: Id<UserMarker>,
         joined_voice_timestamp: Option<OffsetDateTime>,
         last_message_timestamp: Option<OffsetDateTime>,
-        owned_role_ids: HashSet<Id<RoleMarker>>,
         voice_channel_id: Option<Id<ChannelMarker>>,
     ) {
         self.members.write().insert(
@@ -35,7 +34,6 @@ impl Cache {
                 guild_id,
                 joined_voice_timestamp: RwLock::new(joined_voice_timestamp),
                 last_message_timestamp: RwLock::new(last_message_timestamp),
-                owned_role_ids: RwLock::new(owned_role_ids),
                 user_id,
                 voice_channel_id: RwLock::new(voice_channel_id),
             }),
@@ -74,7 +72,6 @@ impl Cache {
         };
         let current_member_last_message_timestamp =
             current_member.last_message_timestamp.read().clone();
-        let current_member_owned_role_ids = current_member.owned_role_ids.read().clone();
         let current_member_joined_voice_timestamp =
             current_member.joined_voice_timestamp.read().clone();
         let current_member_voice_channel_id = current_member.voice_channel_id.read().clone();
@@ -92,11 +89,6 @@ impl Cache {
                     update
                         .last_message_timestamp
                         .unwrap_or(current_member_last_message_timestamp),
-                ),
-                owned_role_ids: RwLock::new(
-                    update
-                        .owned_role_ids
-                        .unwrap_or(current_member_owned_role_ids),
                 ),
                 user_id,
                 voice_channel_id: RwLock::new(

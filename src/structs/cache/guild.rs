@@ -8,7 +8,7 @@ use time::OffsetDateTime;
 use twilight_model::{
     guild::Guild as TwilightGuild,
     id::{
-        marker::{ChannelMarker, GuildMarker, RoleMarker, UserMarker},
+        marker::{ChannelMarker, GuildMarker, UserMarker},
         Id,
     },
 };
@@ -28,10 +28,7 @@ impl Cache {
     pub fn insert_guild(
         &self,
         guild: TwilightGuild,
-        database_members: HashMap<
-            Id<UserMarker>,
-            (Option<OffsetDateTime>, HashSet<Id<RoleMarker>>),
-        >,
+        database_members: HashMap<Id<UserMarker>, Option<OffsetDateTime>>,
         xp_multiplier: i64,
     ) {
         let TwilightGuild {
@@ -54,10 +51,8 @@ impl Cache {
         for member in members {
             let now = OffsetDateTime::now_utc();
             let user_id = member.user.id;
-            let (last_message_timestamp, owned_role_ids) = database_members
-                .get(&user_id)
-                .cloned()
-                .unwrap_or((None, HashSet::new()));
+            let last_message_timestamp =
+                database_members.get(&user_id).cloned().unwrap_or_default();
             let voice_channel_id = voice_states
                 .iter()
                 .find(|voice_state| voice_state.user_id.eq(&user_id))
@@ -71,7 +66,6 @@ impl Cache {
                 user_id,
                 joined_voice_timestamp,
                 last_message_timestamp,
-                owned_role_ids,
                 voice_channel_id,
             );
         }

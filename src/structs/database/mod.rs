@@ -18,7 +18,7 @@ impl Database {
             -- guild table
             CREATE TABLE IF NOT EXISTS public.guild (
                 guild_id INT8 NOT NULL PRIMARY KEY,
-                xp_multiplier INT2 NOT NULL DEFAULT 1
+                xp_multiplier INT8 NOT NULL DEFAULT 1
             );
 
             -- member table
@@ -27,7 +27,6 @@ impl Database {
                 user_id INT8 NOT NULL,
                 xp INT8 NOT NULL DEFAULT 0,
                 last_message_timestamp TIMESTAMP WITH TIME ZONE,
-                owned_role_ids INT8[] NOT NULL DEFAULT '{}',
                 PRIMARY KEY (guild_id, user_id)
             )
         ";
