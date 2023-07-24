@@ -12,7 +12,7 @@ impl Database {
     pub async fn get_levels(
         &self,
         guild_id: Id<GuildMarker>,
-    ) -> Result<Vec<(u8, HashSet<Id<RoleMarker>>)>> {
+    ) -> Result<Vec<(u64, HashSet<Id<RoleMarker>>)>> {
         let client = self.pool.get().await?;
         let statement = "
             SELECT
@@ -30,14 +30,14 @@ impl Database {
             .into_iter()
             .map(|row| {
                 (
-                    row.get::<_, i16>("level") as u8,
+                    row.get::<_, i64>("level") as u64,
                     row.get::<_, Vec<i64>>("role_ids")
                         .into_iter()
                         .map(|id| Id::new(id as u64))
                         .collect::<HashSet<Id<RoleMarker>>>(),
                 )
             })
-            .collect::<Vec<(u8, HashSet<Id<RoleMarker>>)>>();
+            .collect::<Vec<(u64, HashSet<Id<RoleMarker>>)>>();
 
         Ok(level_roles)
     }
@@ -45,8 +45,8 @@ impl Database {
     pub async fn insert_level(
         &self,
         guild_id: Id<GuildMarker>,
-        level: u8,
-        role_ids: Vec<Id<RoleMarker>>,
+        level: u64,
+        role_ids: HashSet<Id<RoleMarker>>,
     ) -> Result<()> {
         let client = self.pool.get().await?;
         let statement = "
@@ -61,7 +61,7 @@ impl Database {
         ";
         let params: &[&(dyn ToSql + Sync)] = &[
             &(guild_id.get() as i64),
-            &(level as i16),
+            &(level as i64),
             &role_ids
                 .into_iter()
                 .map(|role_id| role_id.get() as i64)
@@ -94,7 +94,7 @@ impl Database {
     pub async fn remove_level(
         &self,
         guild_id: Id<GuildMarker>,
-        level: u8,
+        level: u64,
     ) -> Result<()> {
         let client = self.pool.get().await?;
         let statement = "
@@ -114,7 +114,7 @@ impl Database {
     pub async fn update_guild_levels(
         &self,
         guild_id: Id<GuildMarker>,
-        role_ids: Vec<Id<RoleMarker>>,
+        role_ids: HashSet<Id<RoleMarker>>,
     ) -> Result<()> {
         let client = self.pool.get().await?;
         let statement = "

@@ -26,14 +26,14 @@ impl Cache {
         &self,
         channels: Vec<TwilightChannel>,
         guild_id: Id<GuildMarker>,
-        levels: Vec<(u8, HashSet<Id<RoleMarker>>)>,
+        levels: Vec<(u64, HashSet<Id<RoleMarker>>)>,
         members: Vec<(
             Id<UserMarker>,
             Option<OffsetDateTime>,
             Option<Id<ChannelMarker>>,
         )>,
         name: String,
-        xp_multiplier: i64,
+        xp_multiplier: f64,
     ) {
         let mut channel_ids: HashSet<Id<ChannelMarker>> = HashSet::new();
         let mut member_ids: HashSet<Id<UserMarker>> = HashSet::new();

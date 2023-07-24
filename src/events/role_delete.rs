@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, iter, sync::Arc};
 
 use twilight_model::gateway::payload::incoming::RoleDelete;
 
@@ -13,7 +13,7 @@ pub async fn handle_role_delete(
 
     context
         .database
-        .update_guild_levels(guild_id, vec![role_id])
+        .update_guild_levels(guild_id, HashSet::from_iter(iter::once(role_id)))
         .await?;
 
     Ok(())

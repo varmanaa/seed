@@ -7,7 +7,7 @@ impl Database {
     pub async fn insert_guild(
         &self,
         guild_id: Id<GuildMarker>,
-    ) -> Result<i64> {
+    ) -> Result<f64> {
         let client = self.pool.get().await?;
         let statement = "
             INSERT INTO
@@ -23,7 +23,7 @@ impl Database {
         let xp_multiplier = client
             .query_one(statement, params)
             .await
-            .map_or(1i64, |row| row.get::<_, i64>("xp_multiplier"));
+            .map_or(1f64, |row| row.get::<_, f64>("xp_multiplier"));
 
         Ok(xp_multiplier)
     }
@@ -40,6 +40,27 @@ impl Database {
                 guild_id = $1;
         ";
         let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64)];
+
+        client.execute(statement, params).await?;
+
+        Ok(())
+    }
+
+    pub async fn update_xp_multiplier(
+        &self,
+        guild_id: Id<GuildMarker>,
+        xp_multiplier: f64,
+    ) -> Result<()> {
+        let client = self.pool.get().await?;
+        let statement = "
+            UPDATE
+                public.guild
+            SET
+                xp_multiplier = $2
+            WHERE
+                guild_id = $1;
+        ";
+        let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64), &xp_multiplier];
 
         client.execute(statement, params).await?;
 

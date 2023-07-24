@@ -31,19 +31,19 @@ pub struct ChannelUpdate {
 pub struct Guild {
     pub channel_ids: RwLock<HashSet<Id<ChannelMarker>>>,
     pub guild_id: Id<GuildMarker>,
-    pub levels: RwLock<Vec<(u8, HashSet<Id<RoleMarker>>)>>,
+    pub levels: RwLock<Vec<(u64, HashSet<Id<RoleMarker>>)>>,
     pub member_ids: RwLock<HashSet<Id<UserMarker>>>,
     pub name: String,
-    pub xp_multiplier: RwLock<i64>,
+    pub xp_multiplier: RwLock<f64>,
 }
 
 #[derive(Default)]
 pub struct GuildUpdate {
     pub channel_ids: Option<HashSet<Id<ChannelMarker>>>,
-    pub levels: Option<Vec<(u8, HashSet<Id<RoleMarker>>)>>,
+    pub levels: Option<Vec<(u64, HashSet<Id<RoleMarker>>)>>,
     pub member_ids: Option<HashSet<Id<UserMarker>>>,
     pub name: Option<String>,
-    pub xp_multiplier: Option<i64>,
+    pub xp_multiplier: Option<f64>,
 }
 
 pub struct Member {

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use time::OffsetDateTime;
 use twilight_model::{
@@ -28,7 +28,7 @@ pub async fn handle_guild_create(
     let guild_role_ids = roles
         .into_iter()
         .map(|role| role.id)
-        .collect::<Vec<Id<RoleMarker>>>();
+        .collect::<HashSet<Id<RoleMarker>>>();
 
     context
         .database

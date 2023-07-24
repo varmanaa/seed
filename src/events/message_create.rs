@@ -34,7 +34,7 @@ pub async fn handle_message_create(
     let mut rng: StdRng = SeedableRng::from_entropy();
     let base_xp = rng.gen_range(35 ..= 45);
     let xp_multiplier = *guild.xp_multiplier.read();
-    let xp = base_xp * xp_multiplier;
+    let xp = ((base_xp as f64) * xp_multiplier).floor() as i64;
 
     context
         .database

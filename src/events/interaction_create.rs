@@ -8,14 +8,13 @@ use twilight_model::{
 use twilight_util::builder::embed::EmbedBuilder;
 
 use crate::{
-    commands::latency::LatencyCommand,
+    commands::{config::ConfigCommand, latency::LatencyCommand},
     types::{
         context::Context,
         interaction::{
             ApplicationCommandInteraction,
             ApplicationCommandInteractionContext,
             ResponsePayload,
-            UpdateResponsePayload,
         },
         Result,
     },
@@ -41,7 +40,6 @@ pub async fn handle_interaction_create(
         token,
     };
     let embed_builder = EmbedBuilder::new().color(0xF8F8FF);
-
     let (Some(app_permissions), Some(guild_id)) = (app_permissions, guild_id) else {
         return interaction_context.respond(ResponsePayload {
             embeds: vec![embed_builder.description(format!("{} only works in guilds.", context.application_name)).build()],
@@ -49,6 +47,20 @@ pub async fn handle_interaction_create(
             ..Default::default()
         })
         .await
+    };
+    let Some(cached_guild) = context.cache.get_guild(guild_id) else {
+        return interaction_context
+            .respond(ResponsePayload {
+                embeds: vec![embed_builder
+                    .description(format!(
+                        "Please kick and re-invite {}",
+                        context.application_name
+                    ))
+                    .build()],
+                ephemeral: true,
+                ..Default::default()
+            })
+            .await;
     };
 
     if app_permissions.contains(
@@ -71,21 +83,6 @@ pub async fn handle_interaction_create(
         .await;
     }
 
-    if context.cache.get_guild(guild_id).is_none() {
-        return interaction_context
-            .respond(ResponsePayload {
-                embeds: vec![embed_builder
-                    .description(format!(
-                        "Please kick and re-invite {}",
-                        context.application_name
-                    ))
-                    .build()],
-                ephemeral: true,
-                ..Default::default()
-            })
-            .await;
-    }
-
     let Some(InteractionData::ApplicationCommand(data)) = data else {
         return interaction_context.respond(ResponsePayload {
             embeds: vec![embed_builder.description("I have received an unknown interaction.".to_owned()).build()],
@@ -95,36 +92,28 @@ pub async fn handle_interaction_create(
         .await
     };
     let mut interaction = ApplicationCommandInteraction {
+        cached_guild,
         context: interaction_context,
         data,
-        guild_id,
         shard_id,
     };
     let command_name = take(&mut interaction.data.name);
-    let command_result = match command_name.as_str() {
-        "latency" => LatencyCommand::run(&context, &interaction).await,
+
+    match command_name.as_str() {
+        "config" => ConfigCommand::run(&context, &mut interaction).await?,
+        "latency" => LatencyCommand::run(&context, &interaction).await?,
         _ => {
-            return interaction
+            interaction
                 .context
-                .update_response(UpdateResponsePayload {
+                .respond(ResponsePayload {
                     embeds: vec![embed_builder
                         .description("I have received an unknown command with the name \"{}\".")
                         .build()],
                     ..Default::default()
                 })
-                .await
+                .await?;
         }
     };
-
-    if let Err(error) = command_result {
-        return interaction
-            .context
-            .update_response(UpdateResponsePayload {
-                embeds: vec![embed_builder.description(error.to_string()).build()],
-                ..Default::default()
-            })
-            .await;
-    }
 
     Ok(())
 }

@@ -25,7 +25,7 @@ impl Database {
             -- level table
             CREATE TABLE IF NOT EXISTS public.level (
                 guild_id INT8 NOT NULL,
-                level INT2 NOT NULL,
+                level INT8 NOT NULL,
                 role_ids INT8[] NOT NULL DEFAULT '{}'::INT8[],
                 PRIMARY KEY (guild_id, level)
             );

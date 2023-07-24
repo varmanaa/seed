@@ -67,7 +67,7 @@ pub async fn handle_voice_state_update(
         let now = OffsetDateTime::now_utc();
         let elapsed_seconds = now.unix_timestamp() - joined_voice_timestamp.unix_timestamp();
         let xp_multiplier = *guild.xp_multiplier.read();
-        let xp = elapsed_seconds * xp_multiplier / 4;
+        let xp = ((elapsed_seconds as f64) * xp_multiplier / 4.0).floor() as i64;
 
         context
             .database

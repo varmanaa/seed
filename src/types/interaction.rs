@@ -1,17 +1,18 @@
+use std::sync::Arc;
+
 use twilight_http::client::InteractionClient;
 use twilight_model::{
     application::{command::CommandOptionChoice, interaction::application_command::CommandData},
     channel::message::{Component, Embed},
-    id::{
-        marker::{GuildMarker, InteractionMarker},
-        Id,
-    },
+    id::{marker::InteractionMarker, Id},
 };
 
+use crate::types::cache::Guild;
+
 pub struct ApplicationCommandInteraction<'a> {
+    pub cached_guild: Arc<Guild>,
     pub context: ApplicationCommandInteractionContext<'a>,
     pub data: Box<CommandData>,
-    pub guild_id: Id<GuildMarker>,
     pub shard_id: u64,
 }
 
