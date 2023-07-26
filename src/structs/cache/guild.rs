@@ -28,8 +28,10 @@ impl Cache {
         guild_id: Id<GuildMarker>,
         levels: Vec<(u64, HashSet<Id<RoleMarker>>)>,
         members: Vec<(
-            Id<UserMarker>,
+            u16,
             Option<OffsetDateTime>,
+            Id<UserMarker>,
+            String,
             Option<Id<ChannelMarker>>,
         )>,
         name: String,
@@ -44,18 +46,21 @@ impl Cache {
             self.insert_channel(channel);
         }
 
-        for (user_id, last_message_timestamp, voice_channel_id) in members {
+        for (discriminator, last_message_timestamp, user_id, username, voice_channel_id) in members
+        {
             member_ids.insert(user_id);
 
             let joined_voice_timestamp = voice_channel_id.map(|_| OffsetDateTime::now_utc());
 
             self.insert_member(
+                discriminator,
                 guild_id,
-                user_id,
                 joined_voice_timestamp,
                 last_message_timestamp,
+                user_id,
+                username,
                 voice_channel_id,
-            )
+            );
         }
 
         self.guilds.write().insert(

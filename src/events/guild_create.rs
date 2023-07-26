@@ -51,11 +51,13 @@ pub async fn handle_guild_create(
                 .find(|voice_state| voice_state.user_id.eq(&user_id))
                 .map_or(None, |voice_state| voice_state.channel_id);
 
-            (user_id, last_message_timestamp, voice_channel_id)
+            (member.user.discriminator, last_message_timestamp, user_id, member.user.name, voice_channel_id)
         })
         .collect::<Vec<(
-            Id<UserMarker>,
+            u16,
             Option<OffsetDateTime>,
+            Id<UserMarker>,
+            String,
             Option<Id<ChannelMarker>>,
         )>>();
     let xp_multiplier = context.database.insert_guild(guild_id).await?;

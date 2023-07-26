@@ -8,7 +8,7 @@ use twilight_model::{
 use twilight_util::builder::embed::EmbedBuilder;
 
 use crate::{
-    commands::{config::ConfigCommand, latency::LatencyCommand},
+    commands::{config::ConfigCommand, latency::LatencyCommand, leaderboard::LeaderboardCommand},
     types::{
         context::Context,
         interaction::{
@@ -33,7 +33,6 @@ pub async fn handle_interaction_create(
         token,
         ..
     } = payload.0;
-
     let interaction_context = ApplicationCommandInteractionContext {
         id,
         interaction_client: context.interaction_client(),
@@ -102,6 +101,7 @@ pub async fn handle_interaction_create(
     match command_name.as_str() {
         "config" => ConfigCommand::run(&context, &mut interaction).await?,
         "latency" => LatencyCommand::run(&context, &interaction).await?,
+        "leaderboard" => LeaderboardCommand::run(&context, &interaction).await?,
         _ => {
             interaction
                 .context

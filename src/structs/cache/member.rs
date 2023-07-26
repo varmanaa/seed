@@ -22,19 +22,23 @@ impl Cache {
 
     pub fn insert_member(
         &self,
+        discriminator: u16,
         guild_id: Id<GuildMarker>,
-        user_id: Id<UserMarker>,
         joined_voice_timestamp: Option<OffsetDateTime>,
         last_message_timestamp: Option<OffsetDateTime>,
+        user_id: Id<UserMarker>,
+        username: String,
         voice_channel_id: Option<Id<ChannelMarker>>,
     ) {
         self.members.write().insert(
             (guild_id, user_id),
             Arc::new(Member {
+                discriminator,
                 guild_id,
                 joined_voice_timestamp: RwLock::new(joined_voice_timestamp),
                 last_message_timestamp: RwLock::new(last_message_timestamp),
                 user_id,
+                username,
                 voice_channel_id: RwLock::new(voice_channel_id),
             }),
         );
@@ -70,15 +74,18 @@ impl Cache {
         let Some(current_member) = self.get_member(guild_id, user_id) else {
             return
         };
+        let current_member_discriminator = current_member.discriminator;
         let current_member_last_message_timestamp =
             current_member.last_message_timestamp.read().clone();
         let current_member_joined_voice_timestamp =
             current_member.joined_voice_timestamp.read().clone();
+        let current_member_username = current_member.username.clone();
         let current_member_voice_channel_id = current_member.voice_channel_id.read().clone();
 
         self.members.write().insert(
             (guild_id, user_id),
             Arc::new(Member {
+                discriminator: update.discriminator.unwrap_or(current_member_discriminator),
                 guild_id,
                 joined_voice_timestamp: RwLock::new(
                     update
@@ -91,6 +98,7 @@ impl Cache {
                         .unwrap_or(current_member_last_message_timestamp),
                 ),
                 user_id,
+                username: update.username.unwrap_or(current_member_username),
                 voice_channel_id: RwLock::new(
                     update
                         .voice_channel_id

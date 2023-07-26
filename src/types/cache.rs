@@ -47,16 +47,20 @@ pub struct GuildUpdate {
 }
 
 pub struct Member {
+    pub discriminator: u16,
     pub guild_id: Id<GuildMarker>,
     pub joined_voice_timestamp: RwLock<Option<OffsetDateTime>>,
     pub last_message_timestamp: RwLock<Option<OffsetDateTime>>,
     pub user_id: Id<UserMarker>,
+    pub username: String,
     pub voice_channel_id: RwLock<Option<Id<ChannelMarker>>>,
 }
 
 #[derive(Default)]
 pub struct MemberUpdate {
+    pub discriminator: Option<u16>,
     pub joined_voice_timestamp: Option<Option<OffsetDateTime>>,
     pub last_message_timestamp: Option<Option<OffsetDateTime>>,
+    pub username: Option<String>,
     pub voice_channel_id: Option<Option<Id<ChannelMarker>>>,
 }

@@ -36,6 +36,7 @@ impl Database {
                 user_id INT8 NOT NULL,
                 xp INT8 NOT NULL DEFAULT 0,
                 last_message_timestamp TIMESTAMP WITH TIME ZONE,
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (guild_id, user_id)
             )
         ";

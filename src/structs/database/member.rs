@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use time::OffsetDateTime;
 use tokio_postgres::types::ToSql;
 use twilight_model::id::{
@@ -8,6 +10,47 @@ use twilight_model::id::{
 use crate::types::{database::Database, Result};
 
 impl Database {
+    pub async fn get_guild_leaderboard(
+        &self,
+        guild_id: Id<GuildMarker>,
+        member_ids: HashSet<Id<UserMarker>>,
+    ) -> Result<Vec<(Id<UserMarker>, i64)>> {
+        let client = self.pool.get().await?;
+        let statement = "
+            SELECT
+                user_id,
+                xp
+            FROM
+                public.member
+            WHERE
+                guild_id = $1
+                AND user_id = ANY($2)
+            ORDER BY
+                xp DESC,
+                updated_at DESC;
+        ";
+        let params: &[&(dyn ToSql + Sync)] = &[
+            &(guild_id.get() as i64),
+            &member_ids
+                .into_iter()
+                .map(|member_id| member_id.get() as i64)
+                .collect::<Vec<i64>>(),
+        ];
+        let leaderboard = client
+            .query(statement, params)
+            .await?
+            .into_iter()
+            .map(|row| {
+                (
+                    Id::<UserMarker>::new(row.get::<_, i64>("user_id") as u64),
+                    row.get::<_, i64>("xp"),
+                )
+            })
+            .collect();
+
+        Ok(leaderboard)
+    }
+
     pub async fn get_members(
         &self,
         guild_id: Id<GuildMarker>,
