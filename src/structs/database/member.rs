@@ -10,24 +10,34 @@ use twilight_model::id::{
 use crate::types::{database::Database, Result};
 
 impl Database {
-    pub async fn get_guild_leaderboard(
+    pub async fn get_guild_members(
         &self,
         guild_id: Id<GuildMarker>,
         member_ids: HashSet<Id<UserMarker>>,
-    ) -> Result<Vec<(Id<UserMarker>, i64)>> {
+        user_id: Option<Id<UserMarker>>,
+    ) -> Result<Vec<(i64, Id<UserMarker>, i64)>> {
         let client = self.pool.get().await?;
         let statement = "
+            WITH guild_member AS (
+                SELECT
+                    ROW_NUMBER() OVER (ORDER BY
+                        xp DESC,
+                        updated_at DESC
+                    ) AS rank,
+                    user_id,
+                    xp
+                FROM
+                    public.member
+                WHERE
+                    guild_id = $1
+                    AND user_id = ANY($2)
+            )
             SELECT
-                user_id,
-                xp
+                *
             FROM
-                public.member
+                guild_member
             WHERE
-                guild_id = $1
-                AND user_id = ANY($2)
-            ORDER BY
-                xp DESC,
-                updated_at DESC;
+                ($3::INT8 IS NULL OR user_id = $3);
         ";
         let params: &[&(dyn ToSql + Sync)] = &[
             &(guild_id.get() as i64),
@@ -35,6 +45,7 @@ impl Database {
                 .into_iter()
                 .map(|member_id| member_id.get() as i64)
                 .collect::<Vec<i64>>(),
+            &(user_id.map(|user_id| user_id.get() as i64)),
         ];
         let leaderboard = client
             .query(statement, params)
@@ -42,6 +53,7 @@ impl Database {
             .into_iter()
             .map(|row| {
                 (
+                    row.get::<_, i64>("rank"),
                     Id::<UserMarker>::new(row.get::<_, i64>("user_id") as u64),
                     row.get::<_, i64>("xp"),
                 )

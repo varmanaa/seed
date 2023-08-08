@@ -7,7 +7,7 @@ use twilight_model::{
     id::{
         marker::{ChannelMarker, RoleMarker, UserMarker},
         Id,
-    },
+    }
 };
 
 use crate::types::{context::Context, Result};
@@ -37,10 +37,23 @@ pub async fn handle_guild_create(
 
     let levels = context.database.get_levels(guild_id).await?;
     let database_members = context.database.get_members(guild_id).await?;
-    let members = guild_members
+    let formatted_members = guild_members
         .into_iter()
         .map(|member| {
             let user_id = member.user.id;
+            let avatar_url = if let Some(member_avatar) = member.avatar {
+                format!("https://cdn.discordapp.com/guilds/{guild_id}/users/{user_id}/avatars/{member_avatar}.png")
+            } else if let Some(user_avatar) = member.user.avatar {
+                format!("https://cdn.discordapp.com/avatars/{user_id}/{user_avatar}.png")
+            } else {
+                let index = if member.user.discriminator == 0 {
+                    (user_id.get() >> 22) % 6
+                } else {
+                    (member.user.discriminator % 5) as u64
+                };
+                
+                format!("https://cdn.discordapp.com/embed/avatars/{index}.png")
+            };
             let last_message_timestamp = database_members
                 .iter()
                 .find(|(database_member_user_id, _)| user_id.eq(database_member_user_id))
@@ -51,11 +64,23 @@ pub async fn handle_guild_create(
                 .find(|voice_state| voice_state.user_id.eq(&user_id))
                 .map_or(None, |voice_state| voice_state.channel_id);
 
-            (member.user.discriminator, last_message_timestamp, user_id, member.user.name, voice_channel_id)
+            (
+                avatar_url,
+                member.user.bot,
+                member.user.discriminator,
+                last_message_timestamp,
+                member.roles,
+                user_id,
+                member.user.name,
+                voice_channel_id,
+            )
         })
         .collect::<Vec<(
+            String,
+            bool,
             u16,
             Option<OffsetDateTime>,
+            Vec<Id<RoleMarker>>,
             Id<UserMarker>,
             String,
             Option<Id<ChannelMarker>>,
@@ -64,7 +89,7 @@ pub async fn handle_guild_create(
 
     context
         .cache
-        .insert_guild(channels, guild_id, levels, members, name, xp_multiplier);
+        .insert_guild(channels, guild_id, levels, formatted_members, name, xp_multiplier);
 
     Ok(())
 }

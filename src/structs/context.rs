@@ -1,22 +1,20 @@
 use std::{collections::HashMap, sync::Arc};
 
+use hyper::{client::Client as HyperClient, Body};
+use hyper_tls::HttpsConnector;
 use parking_lot::RwLock;
 use twilight_gateway::Latency;
-use twilight_http::client::{Client, InteractionClient};
+use twilight_http::client::Client as HttpClient;
 use twilight_model::oauth::Application;
 
 use crate::types::{cache::Cache, context::Context, database::Database};
 
 impl Context {
-    pub fn interaction_client(&self) -> InteractionClient<'_> {
-        self.http.interaction(self.application_id)
-    }
-
     pub fn new(
         application: Application,
         cache: Cache,
         database: Database,
-        http: Client,
+        http: HttpClient,
     ) -> Self {
         Self {
             application_id: application.id,
@@ -24,6 +22,7 @@ impl Context {
             cache,
             database,
             http: Arc::new(http),
+            hyper: HyperClient::builder().build::<_, Body>(HttpsConnector::new()),
             latencies: RwLock::new(HashMap::new()),
         }
     }

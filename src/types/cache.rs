@@ -47,10 +47,13 @@ pub struct GuildUpdate {
 }
 
 pub struct Member {
+    pub avatar_url: RwLock<String>,
+    pub bot: bool,
     pub discriminator: u16,
     pub guild_id: Id<GuildMarker>,
     pub joined_voice_timestamp: RwLock<Option<OffsetDateTime>>,
     pub last_message_timestamp: RwLock<Option<OffsetDateTime>>,
+    pub role_ids: RwLock<HashSet<Id<RoleMarker>>>,
     pub user_id: Id<UserMarker>,
     pub username: String,
     pub voice_channel_id: RwLock<Option<Id<ChannelMarker>>>,
@@ -58,9 +61,11 @@ pub struct Member {
 
 #[derive(Default)]
 pub struct MemberUpdate {
+    pub avatar_url: Option<String>,
     pub discriminator: Option<u16>,
     pub joined_voice_timestamp: Option<Option<OffsetDateTime>>,
     pub last_message_timestamp: Option<Option<OffsetDateTime>>,
+    pub role_ids: Option<HashSet<Id<RoleMarker>>>,
     pub username: Option<String>,
     pub voice_channel_id: Option<Option<Id<ChannelMarker>>>,
 }

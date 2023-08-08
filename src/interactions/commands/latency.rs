@@ -1,17 +1,11 @@
+use thousands::Separable;
 use twilight_interactions::command::{CommandModel, CreateCommand};
 use twilight_util::builder::embed::EmbedBuilder;
 
-use crate::{
-    types::{
-        context::Context,
-        interaction::{
-            ApplicationCommandInteraction,
-            DeferInteractionPayload,
-            UpdateResponsePayload,
-        },
-        Result,
-    },
-    utility::decimal::add_commas,
+use crate::types::{
+    context::Context,
+    interaction::{ApplicationCommandInteraction, DeferInteractionPayload, UpdatePayload},
+    Result,
 };
 
 #[derive(CommandModel, CreateCommand)]
@@ -31,15 +25,14 @@ impl LatencyCommand {
             .await?;
 
         let response = interaction.context.response().await?;
-        let rtt_ms = (((response.id.get() >> 22) + 1_420_070_400_000)
-            - ((interaction.context.id.get() >> 22) + 1_420_070_400_000))
-            .to_string();
-        let rtt_description = format!("🚀 **RTT**: {} ms", add_commas(rtt_ms));
+        let rtt_ms = ((response.id.get() >> 22) + 1_420_070_400_000)
+            - ((interaction.context.id.get() >> 22) + 1_420_070_400_000);
+        let rtt_description = format!("🚀 **RTT**: {} ms", rtt_ms.separate_with_commas());
         let shard_ping_description = if let Some(latency) = context.latency(interaction.shard_id) {
             latency.average().map_or("".to_owned(), |duration| {
-                let duration_ms = duration.as_millis().to_string();
+                let duration_ms = duration.as_millis();
 
-                format!("🏓 **Shard:** {} ms", add_commas(duration_ms))
+                format!("🏓 **Shard:** {} ms", duration_ms.separate_with_commas())
             })
         } else {
             "".to_owned()
@@ -55,7 +48,7 @@ impl LatencyCommand {
 
         interaction
             .context
-            .update_response(UpdateResponsePayload {
+            .update_response(UpdatePayload {
                 embeds: vec![embed],
                 ..Default::default()
             })

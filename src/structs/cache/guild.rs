@@ -28,8 +28,11 @@ impl Cache {
         guild_id: Id<GuildMarker>,
         levels: Vec<(u64, HashSet<Id<RoleMarker>>)>,
         members: Vec<(
+            String,
+            bool,
             u16,
             Option<OffsetDateTime>,
+            Vec<Id<RoleMarker>>,
             Id<UserMarker>,
             String,
             Option<Id<ChannelMarker>>,
@@ -46,17 +49,29 @@ impl Cache {
             self.insert_channel(channel);
         }
 
-        for (discriminator, last_message_timestamp, user_id, username, voice_channel_id) in members
+        for (
+            avatar,
+            bot,
+            discriminator,
+            last_message_timestamp,
+            role_ids,
+            user_id,
+            username,
+            voice_channel_id,
+        ) in members
         {
             member_ids.insert(user_id);
 
             let joined_voice_timestamp = voice_channel_id.map(|_| OffsetDateTime::now_utc());
 
             self.insert_member(
+                avatar,
+                bot,
                 discriminator,
                 guild_id,
                 joined_voice_timestamp,
                 last_message_timestamp,
+                HashSet::from_iter(role_ids),
                 user_id,
                 username,
                 voice_channel_id,
@@ -82,7 +97,21 @@ impl Cache {
         guild_id: Id<GuildMarker>,
         unavailable: bool,
     ) {
-        self.guilds.write().remove(&guild_id);
+        if unavailable {
+            self.insert_unavailable_guild(guild_id)
+        }
+
+        let Some(guild) = self.guilds.write().remove(&guild_id) else {
+            return;
+        };
+        let guild_id = guild.guild_id;
+
+        for channel_id in guild.channel_ids.read().iter() {
+            self.remove_channel(*channel_id);
+        }
+        for member_id in guild.member_ids.read().iter() {
+            self.remove_member(guild_id, *member_id);
+        }
 
         if unavailable {
             self.insert_unavailable_guild(guild_id)

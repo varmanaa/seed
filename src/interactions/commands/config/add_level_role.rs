@@ -7,7 +7,7 @@ use twilight_util::builder::embed::EmbedBuilder;
 use crate::types::{
     cache::GuildUpdate,
     context::Context,
-    interaction::{ApplicationCommandInteraction, DeferInteractionPayload, UpdateResponsePayload},
+    interaction::{ApplicationCommandInteraction, DeferInteractionPayload, UpdatePayload},
     Result,
 };
 
@@ -90,7 +90,7 @@ impl ConfigAddLevelRoleCommand {
 
         interaction
             .context
-            .update_response(UpdateResponsePayload {
+            .update_response(UpdatePayload {
                 embeds: vec![embed],
                 ..Default::default()
             })

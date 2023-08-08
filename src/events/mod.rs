@@ -7,6 +7,7 @@ mod interaction_create;
 mod member_add;
 mod member_chunk;
 mod member_remove;
+mod member_update;
 mod message_create;
 mod ready;
 mod role_delete;
@@ -28,6 +29,7 @@ use self::{
     member_add::handle_member_add,
     member_chunk::handle_member_chunk,
     member_remove::handle_member_remove,
+    member_update::handle_member_update,
     message_create::handle_message_create,
     ready::handle_ready,
     role_delete::handle_role_delete,
@@ -58,6 +60,7 @@ pub async fn handle_event(
         Event::MemberAdd(payload) => handle_member_add(context, *payload).await,
         Event::MemberChunk(payload) => handle_member_chunk(context, payload).await,
         Event::MemberRemove(payload) => handle_member_remove(context, payload).await,
+        Event::MemberUpdate(payload) => handle_member_update(context, *payload).await,
         Event::MessageCreate(payload) => handle_message_create(context, *payload).await,
         Event::Ready(payload) => handle_ready(context, *payload),
         Event::RoleDelete(payload) => handle_role_delete(context, payload).await,

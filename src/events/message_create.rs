@@ -16,8 +16,13 @@ pub async fn handle_message_create(
     let Some(guild) = context.cache.get_guild(guild_id) else {
         return Ok(());
     };
+
+    if payload.0.author.bot {
+        return Ok(());
+    }
+
     let user_id = payload.0.author.id;
-    let message_epoch = (payload.0.id.get() >> 22) + 1_420_070_400_000;
+    let message_epoch = ((payload.0.id.get() >> 22) + 1_420_070_400_000) / 1000;
     let message_timestamp = OffsetDateTime::from_unix_timestamp(message_epoch as i64).unwrap();
 
     if let Some(member) = context.cache.get_member(guild_id, user_id) {

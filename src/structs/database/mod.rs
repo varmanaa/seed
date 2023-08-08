@@ -19,7 +19,7 @@ impl Database {
             -- guild table
             CREATE TABLE IF NOT EXISTS public.guild (
                 guild_id INT8 NOT NULL PRIMARY KEY,
-                xp_multiplier INT8 NOT NULL DEFAULT 1
+                xp_multiplier FLOAT8 NOT NULL DEFAULT 1
             );
 
             -- level table

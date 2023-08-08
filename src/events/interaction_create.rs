@@ -8,12 +8,21 @@ use twilight_model::{
 use twilight_util::builder::embed::EmbedBuilder;
 
 use crate::{
-    commands::{config::ConfigCommand, latency::LatencyCommand, leaderboard::LeaderboardCommand},
+    interactions::{
+        commands::{
+            config::ConfigCommand,
+            latency::LatencyCommand,
+            leaderboard::LeaderboardCommand,
+            rank::RankCommand,
+        },
+        components::{next::NextComponent, previous::PreviousComponent},
+    },
     types::{
         context::Context,
         interaction::{
             ApplicationCommandInteraction,
-            ApplicationCommandInteractionContext,
+            InteractionContext,
+            MessageComponentInteraction,
             ResponsePayload,
         },
         Result,
@@ -30,12 +39,13 @@ pub async fn handle_interaction_create(
         data,
         guild_id,
         id,
+        message,
         token,
         ..
     } = payload.0;
-    let interaction_context = ApplicationCommandInteractionContext {
+    let interaction_context = InteractionContext {
         id,
-        interaction_client: context.interaction_client(),
+        interaction_client: context.http.interaction(context.application_id),
         token,
     };
     let embed_builder = EmbedBuilder::new().color(0xF8F8FF);
@@ -62,7 +72,7 @@ pub async fn handle_interaction_create(
             .await;
     };
 
-    if app_permissions.contains(
+    if !app_permissions.contains(
         Permissions::EMBED_LINKS
             | Permissions::MANAGE_ROLES
             | Permissions::SEND_MESSAGES
@@ -82,38 +92,76 @@ pub async fn handle_interaction_create(
         .await;
     }
 
-    let Some(InteractionData::ApplicationCommand(data)) = data else {
-        return interaction_context.respond(ResponsePayload {
-            embeds: vec![embed_builder.description("I have received an unknown interaction.".to_owned()).build()],
-            ephemeral: true,
-            ..Default::default()
-        })
-        .await
-    };
-    let mut interaction = ApplicationCommandInteraction {
-        cached_guild,
-        context: interaction_context,
-        data,
-        shard_id,
-    };
-    let command_name = take(&mut interaction.data.name);
+    match data {
+        Some(InteractionData::ApplicationCommand(data)) => {
+            let mut interaction = ApplicationCommandInteraction {
+                cached_guild,
+                context: interaction_context,
+                data,
+                shard_id,
+            };
+            let command_name = take(&mut interaction.data.name);
 
-    match command_name.as_str() {
-        "config" => ConfigCommand::run(&context, &mut interaction).await?,
-        "latency" => LatencyCommand::run(&context, &interaction).await?,
-        "leaderboard" => LeaderboardCommand::run(&context, &interaction).await?,
+            match command_name.as_str() {
+                "config" => ConfigCommand::run(&context, &mut interaction).await?,
+                "latency" => LatencyCommand::run(&context, &interaction).await?,
+                "leaderboard" => LeaderboardCommand::run(&context, &interaction).await?,
+                "rank" => RankCommand::run(&context, &mut interaction).await?,
+                _ => {
+                    interaction
+                        .context
+                        .respond(ResponsePayload {
+                            embeds: vec![embed_builder
+                                .description(
+                                    "I have received an unknown command with the name \"{}\".",
+                                )
+                                .build()],
+                            ..Default::default()
+                        })
+                        .await?;
+                }
+            };
+        }
+        Some(InteractionData::MessageComponent(data)) => {
+            let mut interaction = MessageComponentInteraction {
+                cached_guild,
+                context: interaction_context,
+                data,
+                message: message.unwrap(),
+                shard_id,
+            };
+            let component_name = take(&mut interaction.data.custom_id);
+
+            match component_name.as_str() {
+                "next" => NextComponent::run(&context, &interaction).await?,
+                "previous" => PreviousComponent::run(&context, &interaction).await?,
+                _ => {
+                    interaction
+                        .context
+                        .respond(ResponsePayload {
+                            embeds: vec![embed_builder
+                                .description(
+                                    "I have received an unknown message component interaction with the name \"{}\".",
+                                )
+                                .build()],
+                            ..Default::default()
+                        })
+                        .await?;
+                }
+            }
+        }
         _ => {
-            interaction
-                .context
+            return interaction_context
                 .respond(ResponsePayload {
                     embeds: vec![embed_builder
-                        .description("I have received an unknown command with the name \"{}\".")
+                        .description("I have received an unknown interaction.".to_owned())
                         .build()],
+                    ephemeral: true,
                     ..Default::default()
                 })
-                .await?;
+                .await
         }
-    };
+    }
 
     Ok(())
 }

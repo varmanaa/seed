@@ -1,5 +1,5 @@
-mod commands;
 mod events;
+mod interactions;
 mod structs;
 mod types;
 mod utility;
@@ -33,10 +33,11 @@ async fn main() -> types::Result<()> {
 
     context.database.create_tables().await?;
 
-    let commands = commands::get_commands();
+    let commands = interactions::commands::get_commands();
 
     context
-        .interaction_client()
+        .http
+        .interaction(context.application_id)
         .set_global_commands(&commands)
         .await?;
 

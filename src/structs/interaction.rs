@@ -9,11 +9,10 @@ use twilight_model::{
 use crate::types::{
     interaction::{
         ApplicationCommandInteraction,
-        ApplicationCommandInteractionContext,
-        AutocompletePayload,
         DeferInteractionPayload,
+        InteractionContext,
         ResponsePayload,
-        UpdateResponsePayload,
+        UpdatePayload,
     },
     Result,
 };
@@ -27,26 +26,7 @@ impl ApplicationCommandInteraction<'_> {
     }
 }
 
-impl ApplicationCommandInteractionContext<'_> {
-    pub async fn autocomplete(
-        &self,
-        payload: AutocompletePayload,
-    ) -> Result<()> {
-        let response = InteractionResponse {
-            data: Some(InteractionResponseData {
-                choices: Some(payload.choices),
-                ..Default::default()
-            }),
-            kind: InteractionResponseType::ApplicationCommandAutocompleteResult,
-        };
-
-        self.interaction_client
-            .create_response(self.id, &self.token, &response)
-            .await?;
-
-        Ok(())
-    }
-
+impl InteractionContext<'_> {
     pub async fn defer(
         &self,
         payload: DeferInteractionPayload,
@@ -108,9 +88,39 @@ impl ApplicationCommandInteractionContext<'_> {
         Ok(message)
     }
 
+    pub async fn update_message(
+        &self,
+        payload: UpdatePayload,
+    ) -> Result<()> {
+        let components = if payload.components.is_empty() {
+            None
+        } else {
+            Some(payload.components)
+        };
+        let embeds = if payload.embeds.is_empty() {
+            None
+        } else {
+            Some(payload.embeds)
+        };
+        let response = InteractionResponse {
+            data: Some(InteractionResponseData {
+                components,
+                embeds,
+                ..Default::default()
+            }),
+            kind: InteractionResponseType::UpdateMessage,
+        };
+
+        self.interaction_client
+            .create_response(self.id, &self.token, &response)
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn update_response(
         &self,
-        payload: UpdateResponsePayload,
+        payload: UpdatePayload,
     ) -> Result<()> {
         let components = if payload.components.is_empty() {
             None
@@ -125,6 +135,7 @@ impl ApplicationCommandInteractionContext<'_> {
 
         self.interaction_client
             .update_response(&self.token)
+            .attachments(payload.attachments.as_slice())?
             .components(components)?
             .embeds(embeds)?
             .await?;

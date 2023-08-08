@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use parking_lot::RwLock;
 use time::OffsetDateTime;
 use twilight_model::id::{
-    marker::{ChannelMarker, GuildMarker, UserMarker},
+    marker::{ChannelMarker, GuildMarker, RoleMarker, UserMarker},
     Id,
 };
 
@@ -22,10 +22,13 @@ impl Cache {
 
     pub fn insert_member(
         &self,
+        avatar_url: String,
+        bot: bool,
         discriminator: u16,
         guild_id: Id<GuildMarker>,
         joined_voice_timestamp: Option<OffsetDateTime>,
         last_message_timestamp: Option<OffsetDateTime>,
+        role_ids: HashSet<Id<RoleMarker>>,
         user_id: Id<UserMarker>,
         username: String,
         voice_channel_id: Option<Id<ChannelMarker>>,
@@ -33,10 +36,13 @@ impl Cache {
         self.members.write().insert(
             (guild_id, user_id),
             Arc::new(Member {
+                avatar_url: RwLock::new(avatar_url),
+                bot,
                 discriminator,
                 guild_id,
                 joined_voice_timestamp: RwLock::new(joined_voice_timestamp),
                 last_message_timestamp: RwLock::new(last_message_timestamp),
+                role_ids: RwLock::new(role_ids),
                 user_id,
                 username,
                 voice_channel_id: RwLock::new(voice_channel_id),
@@ -74,17 +80,21 @@ impl Cache {
         let Some(current_member) = self.get_member(guild_id, user_id) else {
             return
         };
+        let current_member_avatar_url = current_member.avatar_url.read().clone();
         let current_member_discriminator = current_member.discriminator;
         let current_member_last_message_timestamp =
             current_member.last_message_timestamp.read().clone();
         let current_member_joined_voice_timestamp =
             current_member.joined_voice_timestamp.read().clone();
+        let current_member_role_ids = current_member.role_ids.read().clone();
         let current_member_username = current_member.username.clone();
         let current_member_voice_channel_id = current_member.voice_channel_id.read().clone();
 
         self.members.write().insert(
             (guild_id, user_id),
             Arc::new(Member {
+                avatar_url: RwLock::new(update.avatar_url.unwrap_or(current_member_avatar_url)),
+                bot: current_member.bot,
                 discriminator: update.discriminator.unwrap_or(current_member_discriminator),
                 guild_id,
                 joined_voice_timestamp: RwLock::new(
@@ -97,6 +107,7 @@ impl Cache {
                         .last_message_timestamp
                         .unwrap_or(current_member_last_message_timestamp),
                 ),
+                role_ids: RwLock::new(update.role_ids.unwrap_or(current_member_role_ids)),
                 user_id,
                 username: update.username.unwrap_or(current_member_username),
                 voice_channel_id: RwLock::new(

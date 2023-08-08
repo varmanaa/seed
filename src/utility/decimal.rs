@@ -1,7 +1,11 @@
-use crate::utility::constants::COMMA_REGEX;
-
-pub fn add_commas(decimal: String) -> String {
-    COMMA_REGEX.replace_all(decimal.as_str(), "$1,").to_string()
+pub fn abbreviate(decimal: i64) -> String {
+    match decimal {
+        i64::MIN ..= -1_000_000 | 1_000_000 ..= i64::MAX => {
+            format!("{:.1}m", decimal as f64 / 1_000_000.0)
+        }
+        -999_999 ..= -1_000 | 1_000 ..= 999_999 => format!("{:.1}k", decimal as f64 / 1_000.0),
+        _ => decimal.to_string(),
+    }
 }
 
 pub fn modulo(

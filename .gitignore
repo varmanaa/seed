@@ -13,5 +13,7 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-# These are files specific to seed
+# These are files specific to the bot
+assets/images/*
+!assets/images/default.png
 .env

@@ -18,7 +18,10 @@ pub async fn connect(
     client: &Client,
     current_sessions: HashMap<u64, Session>,
 ) -> Result<Vec<Shard>> {
-    let intents = Intents::GUILDS | Intents::GUILD_MEMBERS | Intents::GUILD_VOICE_STATES;
+    let intents = Intents::GUILDS
+        | Intents::GUILD_MEMBERS
+        | Intents::GUILD_MESSAGES
+        | Intents::GUILD_VOICE_STATES;
     let event_types = EventTypeFlags::CHANNEL_CREATE
         | EventTypeFlags::CHANNEL_CREATE
         | EventTypeFlags::CHANNEL_DELETE
@@ -34,6 +37,7 @@ pub async fn connect(
         | EventTypeFlags::MEMBER_ADD
         | EventTypeFlags::MEMBER_CHUNK
         | EventTypeFlags::MEMBER_REMOVE
+        | EventTypeFlags::MEMBER_UPDATE
         | EventTypeFlags::MESSAGE_CREATE
         | EventTypeFlags::READY
         | EventTypeFlags::ROLE_DELETE

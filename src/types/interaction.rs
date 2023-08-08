@@ -2,8 +2,12 @@ use std::sync::Arc;
 
 use twilight_http::client::InteractionClient;
 use twilight_model::{
-    application::{command::CommandOptionChoice, interaction::application_command::CommandData},
-    channel::message::{Component, Embed},
+    application::interaction::{
+        application_command::CommandData,
+        message_component::MessageComponentInteractionData,
+    },
+    channel::message::{Component, Embed, Message},
+    http::attachment::Attachment,
     id::{marker::InteractionMarker, Id},
 };
 
@@ -11,25 +15,28 @@ use crate::types::cache::Guild;
 
 pub struct ApplicationCommandInteraction<'a> {
     pub cached_guild: Arc<Guild>,
-    pub context: ApplicationCommandInteractionContext<'a>,
+    pub context: InteractionContext<'a>,
     pub data: Box<CommandData>,
     pub shard_id: u64,
 }
 
-pub struct ApplicationCommandInteractionContext<'a> {
+pub struct InteractionContext<'a> {
     pub id: Id<InteractionMarker>,
     pub interaction_client: InteractionClient<'a>,
     pub token: String,
 }
 
 #[derive(Default)]
-pub struct AutocompletePayload {
-    pub choices: Vec<CommandOptionChoice>,
-}
-
-#[derive(Default)]
 pub struct DeferInteractionPayload {
     pub ephemeral: bool,
+}
+
+pub struct MessageComponentInteraction<'a> {
+    pub cached_guild: Arc<Guild>,
+    pub context: InteractionContext<'a>,
+    pub data: MessageComponentInteractionData,
+    pub message: Message,
+    pub shard_id: u64,
 }
 
 #[derive(Default)]
@@ -40,7 +47,8 @@ pub struct ResponsePayload {
 }
 
 #[derive(Default)]
-pub struct UpdateResponsePayload {
+pub struct UpdatePayload {
+    pub attachments: Vec<Attachment>,
     pub components: Vec<Component>,
     pub embeds: Vec<Embed>,
 }
