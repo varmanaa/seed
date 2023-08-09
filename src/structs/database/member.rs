@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use time::OffsetDateTime;
 use tokio_postgres::types::ToSql;
 use twilight_model::id::{
@@ -10,67 +8,45 @@ use twilight_model::id::{
 use crate::types::{database::Database, Result};
 
 impl Database {
-    pub async fn get_guild_members(
+    pub async fn get_member(
         &self,
         guild_id: Id<GuildMarker>,
-        member_ids: HashSet<Id<UserMarker>>,
-        user_id: Option<Id<UserMarker>>,
-    ) -> Result<Vec<(i64, Id<UserMarker>, i64)>> {
+        user_id: Id<UserMarker>,
+    ) -> Result<Option<(i64, Option<OffsetDateTime>)>> {
         let client = self.pool.get().await?;
         let statement = "
-            WITH guild_member AS (
-                SELECT
-                    ROW_NUMBER() OVER (ORDER BY
-                        xp DESC,
-                        updated_at DESC
-                    ) AS rank,
-                    user_id,
-                    xp
-                FROM
-                    public.member
-                WHERE
-                    guild_id = $1
-                    AND user_id = ANY($2)
-            )
             SELECT
-                *
+                xp,
+                last_message_timestamp
             FROM
-                guild_member
+                public.member
             WHERE
-                ($3::INT8 IS NULL OR user_id = $3);
+                guild_id = $1
+                AND user_id = $2;
         ";
-        let params: &[&(dyn ToSql + Sync)] = &[
-            &(guild_id.get() as i64),
-            &member_ids
-                .into_iter()
-                .map(|member_id| member_id.get() as i64)
-                .collect::<Vec<i64>>(),
-            &(user_id.map(|user_id| user_id.get() as i64)),
-        ];
-        let leaderboard = client
-            .query(statement, params)
-            .await?
-            .into_iter()
-            .map(|row| {
-                (
-                    row.get::<_, i64>("rank"),
-                    Id::<UserMarker>::new(row.get::<_, i64>("user_id") as u64),
+        let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64), &(user_id.get() as i64)];
+        let member = client
+            .query_one(statement, params)
+            .await
+            .map_or(None, |row| {
+                Some((
                     row.get::<_, i64>("xp"),
-                )
-            })
-            .collect();
+                    row.get::<_, Option<OffsetDateTime>>("last_message_timestamp"),
+                ))
+            });
 
-        Ok(leaderboard)
+        Ok(member)
     }
 
     pub async fn get_members(
         &self,
         guild_id: Id<GuildMarker>,
-    ) -> Result<Vec<(Id<UserMarker>, Option<OffsetDateTime>)>> {
+    ) -> Result<Vec<(Id<UserMarker>, i64, Option<OffsetDateTime>)>> {
         let client = self.pool.get().await?;
         let statement = "
             SELECT
                 user_id,
+                xp,
                 last_message_timestamp
             FROM
                 public.member
@@ -85,6 +61,7 @@ impl Database {
             .map(|row| {
                 (
                     Id::<UserMarker>::new(row.get::<_, i64>("user_id") as u64),
+                    row.get::<_, i64>("xp"),
                     row.get::<_, Option<OffsetDateTime>>("last_message_timestamp"),
                 )
             })
@@ -93,53 +70,31 @@ impl Database {
         Ok(members)
     }
 
-    pub async fn insert_member(
-        &self,
-        guild_id: Id<GuildMarker>,
-        user_id: Id<UserMarker>,
-    ) -> Result<Option<OffsetDateTime>> {
-        let client = self.pool.get().await?;
-        let statement = "
-            INSERT INTO
-                public.member (guild_id, user_id)
-            VALUES
-                ($1, $2)
-            ON CONFLICT
-            DO NOTHING
-            RETURNING
-                last_message_timestamp;
-        ";
-        let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64), &(user_id.get() as i64)];
-        let last_message_timestamp = client
-            .query_one(statement, params)
-            .await
-            .map_or(None, |row| {
-                row.get::<_, Option<OffsetDateTime>>("last_message_timestamp")
-            });
-
-        Ok(last_message_timestamp)
-    }
-
     pub async fn update_member_xp(
         &self,
         guild_id: Id<GuildMarker>,
         user_id: Id<UserMarker>,
-        amount: i64,
+        updated_xp: i64,
         last_message_timestamp: Option<OffsetDateTime>,
     ) -> Result<()> {
         let client = self.pool.get().await?;
         let statement = "
-            UPDATE
-                public.member
+            INSERT INTO
+                public.member (guild_id, user_id, xp, last_message_timestamp)
+            VALUES
+                ($1, $2, $3, $4)
+            ON CONFLICT (guild_id, user_id)
+            DO UPDATE
             SET
-                xp = xp + $3,
-                last_message_timestamp = COALESCE($4, last_message_timestamp)
-            WHERE
-                guild_id = $1
-                AND user_id = $2;
+                xp = $3,
+                last_message_timestamp = COALESCE($4, EXCLUDED.last_message_timestamp);
         ";
-        let params: &[&(dyn ToSql + Sync)] =
-            &[&(guild_id.get() as i64), &(user_id.get() as i64), &amount, &last_message_timestamp];
+        let params: &[&(dyn ToSql + Sync)] = &[
+            &(guild_id.get() as i64),
+            &(user_id.get() as i64),
+            &updated_xp,
+            &last_message_timestamp,
+        ];
 
         client.execute(statement, params).await?;
 

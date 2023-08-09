@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 
 pub static BOT_TOKEN: Lazy<String> = Lazy::new(|| env::var("BOT_TOKEN").unwrap());
 pub static DATABASE_URL: Lazy<String> = Lazy::new(|| env::var("DATABASE_URL").unwrap());
-pub static FLUCTUATING_XP: Lazy<Vec<(i64, i64, i64)>> = Lazy::new(|| {
+pub static FLUCTUATING_XP: Lazy<Vec<(u64, i64, i64)>> = Lazy::new(|| {
     vec![
         (1, 0, 4),
         (2, 4, 9),

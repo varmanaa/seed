@@ -32,6 +32,7 @@ impl Cache {
         user_id: Id<UserMarker>,
         username: String,
         voice_channel_id: Option<Id<ChannelMarker>>,
+        xp: i64,
     ) {
         self.members.write().insert(
             (guild_id, user_id),
@@ -46,6 +47,7 @@ impl Cache {
                 user_id,
                 username,
                 voice_channel_id: RwLock::new(voice_channel_id),
+                xp: RwLock::new(xp),
             }),
         );
 
@@ -89,6 +91,7 @@ impl Cache {
         let current_member_role_ids = current_member.role_ids.read().clone();
         let current_member_username = current_member.username.clone();
         let current_member_voice_channel_id = current_member.voice_channel_id.read().clone();
+        let current_member_xp = current_member.xp.read().clone();
 
         self.members.write().insert(
             (guild_id, user_id),
@@ -115,6 +118,7 @@ impl Cache {
                         .voice_channel_id
                         .unwrap_or(current_member_voice_channel_id),
                 ),
+                xp: RwLock::new(update.xp.unwrap_or(current_member_xp)),
             }),
         );
     }

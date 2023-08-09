@@ -12,7 +12,11 @@ pub async fn handle_member_chunk(
 
     for member in payload.members {
         let user_id = member.user.id;
-        let last_message_timestamp = context.database.insert_member(guild_id, user_id).await?;
+        let (xp, last_message_timestamp) = context
+            .database
+            .get_member(guild_id, user_id)
+            .await?
+            .unwrap_or_default();
         let avatar_url = if let Some(member_avatar) = member.avatar {
             format!("https://cdn.discordapp.com/guilds/{guild_id}/users/{user_id}/avatars/{member_avatar}.png")
         } else if let Some(user_avatar) = member.user.avatar {
@@ -38,6 +42,7 @@ pub async fn handle_member_chunk(
             user_id,
             member.user.name.clone(),
             None,
+            xp,
         );
     }
 

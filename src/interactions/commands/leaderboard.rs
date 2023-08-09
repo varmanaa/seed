@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use thousands::Separable;
 use tokio::time::sleep;
@@ -11,6 +11,7 @@ use twilight_model::channel::message::{
 use twilight_util::builder::embed::{EmbedBuilder, EmbedFooterBuilder};
 
 use crate::types::{
+    cache::Member,
     context::Context,
     interaction::{ApplicationCommandInteraction, DeferInteractionPayload, UpdatePayload},
     Result,
@@ -32,11 +33,36 @@ impl LeaderboardCommand {
             })
             .await?;
 
-        let member_ids = interaction.cached_guild.member_ids.read().clone();
-        let leaderboard = context
-            .database
-            .get_guild_members(interaction.cached_guild.guild_id, member_ids, None)
-            .await?;
+        let mut leaderboard = interaction
+            .cached_guild
+            .member_ids
+            .read()
+            .iter()
+            .filter_map(|user_id| {
+                context
+                    .cache
+                    .get_member(interaction.cached_guild.guild_id, *user_id)
+            })
+            .collect::<Vec<Arc<Member>>>();
+
+        leaderboard.sort_unstable_by(|a, b| {
+            if !b.xp.read().eq(&*a.xp.read()) {
+                b.xp.read().cmp(&a.xp.read())
+            } else if !b
+                .last_message_timestamp
+                .read()
+                .eq(&a.last_message_timestamp.read())
+            {
+                b.last_message_timestamp
+                    .read()
+                    .cmp(&a.last_message_timestamp.read())
+            } else {
+                b.joined_voice_timestamp
+                    .read()
+                    .cmp(&a.joined_voice_timestamp.read())
+            }
+        });
+
         let mut embed_builder = EmbedBuilder::new()
             .color(0xF8F8FF)
             .title(format!("{} leaderboard", interaction.cached_guild.name));
@@ -59,24 +85,21 @@ impl LeaderboardCommand {
             leaderboard
                 .iter()
                 .take(10)
-                .filter_map(|(rank, user_id, xp)| {
-                    context
-                        .cache
-                        .get_member(interaction.cached_guild.guild_id, *user_id)
-                        .map(|member| {
-                            let username = if member.discriminator == 0 {
-                                member.username.clone()
-                            } else {
-                                format!("{}#{:04}", member.username, member.discriminator)
-                            };
+                .enumerate()
+                .map(|(index, member)| {
+                    let rank = index + 1;
+                    let username = if member.discriminator == 0 {
+                        member.username.clone()
+                    } else {
+                        format!("{}#{:04}", member.username, member.discriminator)
+                    };
 
-                            format!(
-                                "#{} - **{}** ({} XP)",
-                                rank,
-                                username,
-                                xp.separate_with_commas()
-                            )
-                        })
+                    format!(
+                        "#{} - **{}** ({} XP)",
+                        rank,
+                        username,
+                        member.xp.read().separate_with_commas()
+                    )
                 })
                 .collect::<Vec<String>>()
                 .join("\n"),

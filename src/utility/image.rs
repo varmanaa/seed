@@ -25,7 +25,7 @@ pub fn get_profile(
     guild_id: Id<GuildMarker>,
     avatar_image: Image,
     username: String,
-    rank: i64,
+    rank: u64,
     xp: i64,
 ) -> Attachment {
     let mut surface = Surface::new();

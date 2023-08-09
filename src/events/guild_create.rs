@@ -54,10 +54,10 @@ pub async fn handle_guild_create(
                 
                 format!("https://cdn.discordapp.com/embed/avatars/{index}.png")
             };
-            let last_message_timestamp = database_members
+            let (xp, last_message_timestamp) = database_members
                 .iter()
-                .find(|(database_member_user_id, _)| user_id.eq(database_member_user_id))
-                .map(|(_, last_message_timestamp)| last_message_timestamp.clone())
+                .find(|(database_member_user_id, ..)| user_id.eq(database_member_user_id))
+                .map(|(.., xp, last_message_timestamp)| (xp.to_owned(), last_message_timestamp.to_owned()))
                 .unwrap_or_default();
             let voice_channel_id = voice_states
                 .iter()
@@ -73,6 +73,7 @@ pub async fn handle_guild_create(
                 user_id,
                 member.user.name,
                 voice_channel_id,
+                xp
             )
         })
         .collect::<Vec<(
@@ -84,6 +85,7 @@ pub async fn handle_guild_create(
             Id<UserMarker>,
             String,
             Option<Id<ChannelMarker>>,
+            i64
         )>>();
     let xp_multiplier = context.database.insert_guild(guild_id).await?;
 

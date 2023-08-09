@@ -57,6 +57,7 @@ pub struct Member {
     pub user_id: Id<UserMarker>,
     pub username: String,
     pub voice_channel_id: RwLock<Option<Id<ChannelMarker>>>,
+    pub xp: RwLock<i64>
 }
 
 #[derive(Default)]
@@ -68,4 +69,5 @@ pub struct MemberUpdate {
     pub role_ids: Option<HashSet<Id<RoleMarker>>>,
     pub username: Option<String>,
     pub voice_channel_id: Option<Option<Id<ChannelMarker>>>,
+    pub xp: Option<i64>
 }

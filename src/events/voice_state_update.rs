@@ -1,12 +1,18 @@
-use std::sync::Arc;
+use std::{cmp, collections::HashSet, sync::Arc};
 
 use time::OffsetDateTime;
-use twilight_model::gateway::payload::incoming::VoiceStateUpdate;
+use twilight_model::{
+    gateway::payload::incoming::VoiceStateUpdate,
+    id::{marker::RoleMarker, Id},
+};
 
-use crate::types::{
-    cache::{ChannelUpdate, MemberUpdate},
-    context::Context,
-    Result,
+use crate::{
+    types::{
+        cache::{ChannelUpdate, MemberUpdate},
+        context::Context,
+        Result,
+    },
+    utility::constants::FLUCTUATING_XP,
 };
 
 pub async fn handle_voice_state_update(
@@ -90,9 +96,40 @@ pub async fn handle_voice_state_update(
         let xp_multiplier = *guild.xp_multiplier.read();
         let xp = ((elapsed_seconds as f64) * xp_multiplier / 4.0).floor() as i64;
 
+        let current_xp = member.xp.read().to_owned();
+        let current_level = FLUCTUATING_XP
+            .iter()
+            .position(|&level| current_xp.lt(&level.1))
+            .map_or(100, |position| FLUCTUATING_XP[cmp::max(position - 1, 0)].0);
+        let updated_xp = current_xp + xp;
+        let updated_level = FLUCTUATING_XP
+            .iter()
+            .position(|&level| updated_xp.lt(&level.1))
+            .map_or(100, |position| FLUCTUATING_XP[cmp::max(position - 1, 0)].0);
+
+        if updated_level.ne(&current_level) {
+            let mut member_role_ids = member.role_ids.read().to_owned();
+            let level_role_ids = guild
+                .levels
+                .read()
+                .to_owned()
+                .into_iter()
+                .filter_map(|(level, role_ids)| level.le(&updated_level).then(|| role_ids))
+                .flatten()
+                .collect::<HashSet<Id<RoleMarker>>>();
+
+            member_role_ids.extend(level_role_ids);
+
+            context
+                .http
+                .update_guild_member(guild_id, user_id)
+                .roles(&member_role_ids.into_iter().collect::<Vec<Id<RoleMarker>>>())
+                .await?;
+        }
+
         context
             .database
-            .update_member_xp(guild_id, user_id, xp, None)
+            .update_member_xp(guild_id, user_id, updated_xp, None)
             .await?;
         context.cache.update_member(
             guild_id,
@@ -100,6 +137,7 @@ pub async fn handle_voice_state_update(
             MemberUpdate {
                 joined_voice_timestamp: Some(None),
                 voice_channel_id: Some(None),
+                xp: Some(updated_xp),
                 ..Default::default()
             },
         );
@@ -120,16 +158,52 @@ pub async fn handle_voice_state_update(
             let only_user_xp =
                 ((only_user_elapsed_seconds as f64) * xp_multiplier / 4.0).floor() as i64;
 
+            let only_user_current_xp = only_member.xp.read().to_owned();
+            let only_user_current_level = FLUCTUATING_XP
+                .iter()
+                .position(|&level| only_user_current_xp.lt(&level.1))
+                .map_or(100, |position| FLUCTUATING_XP[cmp::max(position - 1, 0)].0);
+            let only_user_updated_xp = only_user_current_xp + only_user_xp;
+            let only_user_updated_level = FLUCTUATING_XP
+                .iter()
+                .position(|&level| only_user_updated_xp.lt(&level.1))
+                .map_or(100, |position| FLUCTUATING_XP[cmp::max(position - 1, 0)].0);
+
+            if only_user_updated_level.ne(&only_user_current_level) {
+                let mut only_user_role_ids = only_member.role_ids.read().to_owned();
+                let level_role_ids = guild
+                    .levels
+                    .read()
+                    .to_owned()
+                    .into_iter()
+                    .filter_map(|(level, role_ids)| level.le(&updated_level).then(|| role_ids))
+                    .flatten()
+                    .collect::<HashSet<Id<RoleMarker>>>();
+
+                only_user_role_ids.extend(level_role_ids);
+
+                context
+                    .http
+                    .update_guild_member(guild_id, only_user_id)
+                    .roles(
+                        &only_user_role_ids
+                            .into_iter()
+                            .collect::<Vec<Id<RoleMarker>>>(),
+                    )
+                    .await?;
+            }
+
             context
                 .database
-                .update_member_xp(guild_id, only_user_id, only_user_xp, None)
+                .update_member_xp(guild_id, only_user_id, only_user_updated_xp, None)
                 .await?;
             context.cache.update_member(
                 guild_id,
-                user_id,
+                only_user_id,
                 MemberUpdate {
                     joined_voice_timestamp: Some(None),
                     voice_channel_id: Some(None),
+                    xp: Some(only_user_current_xp),
                     ..Default::default()
                 },
             );

@@ -36,6 +36,7 @@ impl Cache {
             Id<UserMarker>,
             String,
             Option<Id<ChannelMarker>>,
+            i64,
         )>,
         name: String,
         xp_multiplier: f64,
@@ -58,6 +59,7 @@ impl Cache {
             user_id,
             username,
             voice_channel_id,
+            xp,
         ) in members
         {
             member_ids.insert(user_id);
@@ -75,6 +77,7 @@ impl Cache {
                 user_id,
                 username,
                 voice_channel_id,
+                xp,
             );
         }
 

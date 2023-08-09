@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use skia_safe::{Data, Image};
 use twilight_interactions::command::{CommandModel, CreateCommand};
@@ -6,6 +6,7 @@ use twilight_model::id::{marker::UserMarker, Id};
 
 use crate::{
     types::{
+        cache::Member,
         context::Context,
         interaction::{ApplicationCommandInteraction, DeferInteractionPayload, UpdatePayload},
         Result,
@@ -36,10 +37,14 @@ impl RankCommand {
         let Self {
             user_id,
         } = RankCommand::from_interaction(interaction.input_data())?;
-        let (avatar_url, username) = if let Some(member) =
+        let (avatar_url, username, xp) = if let Some(member) =
             context.cache.get_member(guild_id, user_id)
         {
-            (member.avatar_url.read().clone(), member.username.clone())
+            (
+                member.avatar_url.read().to_owned(),
+                member.username.to_owned(),
+                member.xp.read().to_owned(),
+            )
         } else {
             let member = context
                 .http
@@ -60,7 +65,11 @@ impl RankCommand {
 
                 format!("https://cdn.discordapp.com/embed/avatars/{index}.png")
             };
-            let last_message_timestamp = context.database.insert_member(guild_id, user_id).await?;
+            let (xp, last_message_timestamp) = context
+                .database
+                .get_member(guild_id, user_id)
+                .await?
+                .unwrap_or_default();
 
             context.cache.insert_member(
                 avatar_url.clone(),
@@ -69,28 +78,55 @@ impl RankCommand {
                 guild_id,
                 None,
                 last_message_timestamp,
-                HashSet::from_iter(member.roles.clone()),
+                HashSet::from_iter(member.roles.to_owned()),
                 user_id,
-                member.user.name.clone(),
+                member.user.name.to_owned(),
                 None,
+                xp,
             );
 
-            (avatar_url, member.user.name)
+            (avatar_url, member.user.name, xp)
         };
-        let member_ids = interaction.cached_guild.member_ids.read().clone();
-        let (rank, _, xp) = context
-            .database
-            .get_guild_members(interaction.cached_guild.guild_id, member_ids, Some(user_id))
-            .await?
-            .first()
-            .cloned()
-            .unwrap();
+        let mut leaderboard = interaction
+            .cached_guild
+            .member_ids
+            .read()
+            .iter()
+            .filter_map(|user_id| {
+                context
+                    .cache
+                    .get_member(interaction.cached_guild.guild_id, *user_id)
+            })
+            .collect::<Vec<Arc<Member>>>();
+
+        leaderboard.sort_unstable_by(|a, b| {
+            if !b.xp.read().eq(&*a.xp.read()) {
+                b.xp.read().cmp(&a.xp.read())
+            } else if !b
+                .last_message_timestamp
+                .read()
+                .eq(&a.last_message_timestamp.read())
+            {
+                b.last_message_timestamp
+                    .read()
+                    .cmp(&a.last_message_timestamp.read())
+            } else {
+                b.joined_voice_timestamp
+                    .read()
+                    .cmp(&a.joined_voice_timestamp.read())
+            }
+        });
+
+        let index = leaderboard
+            .into_iter()
+            .position(|member| member.user_id.eq(&user_id))
+            .unwrap_or(interaction.cached_guild.member_ids.read().len() - 1);
         let formatted_uri = format!("{avatar_url}?size=512");
         let response = context.hyper.get(formatted_uri.parse()?).await?;
         let avatar_image_bytes = hyper::body::to_bytes(response.into_body()).await?;
         let avatar_image_data = Data::new_copy(&avatar_image_bytes);
         let avatar_image = Image::from_encoded(avatar_image_data).unwrap();
-        let attachment = get_profile(guild_id, avatar_image, username, rank, xp);
+        let attachment = get_profile(guild_id, avatar_image, username, (index + 1) as u64, xp);
 
         interaction
             .context

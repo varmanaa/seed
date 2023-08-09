@@ -104,7 +104,7 @@ impl Database {
                 guild_id = $1
                 AND level = $2;
         ";
-        let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64), &(level as i16)];
+        let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64), &(level as i64)];
 
         client.execute(statement, params).await?;
 
