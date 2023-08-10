@@ -18,7 +18,7 @@ use crate::{
 #[command(desc = "View a member's rank", name = "rank")]
 pub struct RankCommand {
     #[command(desc = "The member to check", rename = "member")]
-    user_id: Id<UserMarker>,
+    user_id: Option<Id<UserMarker>>,
 }
 
 impl RankCommand {
@@ -34,9 +34,9 @@ impl RankCommand {
             .await?;
 
         let guild_id = interaction.cached_guild.guild_id;
-        let Self {
-            user_id,
-        } = RankCommand::from_interaction(interaction.input_data())?;
+        let user_id = RankCommand::from_interaction(interaction.input_data())?
+            .user_id
+            .unwrap_or(interaction.user_id);
         let (avatar_url, username, xp) = if let Some(member) =
             context.cache.get_member(guild_id, user_id)
         {
@@ -117,16 +117,17 @@ impl RankCommand {
             }
         });
 
-        let index = leaderboard
-            .into_iter()
-            .position(|member| member.user_id.eq(&user_id))
-            .unwrap_or(interaction.cached_guild.member_ids.read().len() - 1);
         let formatted_uri = format!("{avatar_url}?size=512");
         let response = context.hyper.get(formatted_uri.parse()?).await?;
         let avatar_image_bytes = hyper::body::to_bytes(response.into_body()).await?;
         let avatar_image_data = Data::new_copy(&avatar_image_bytes);
         let avatar_image = Image::from_encoded(avatar_image_data).unwrap();
-        let attachment = get_profile(guild_id, avatar_image, username, (index + 1) as u64, xp);
+        let rank = leaderboard
+            .into_iter()
+            .position(|member| member.user_id.eq(&user_id))
+            .unwrap_or(interaction.cached_guild.member_ids.read().len() - 1)
+            + 1;
+        let attachment = get_profile(guild_id, avatar_image, username, rank, xp);
 
         interaction
             .context

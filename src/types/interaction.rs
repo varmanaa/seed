@@ -8,7 +8,10 @@ use twilight_model::{
     },
     channel::message::{Component, Embed, Message},
     http::attachment::Attachment,
-    id::{marker::InteractionMarker, Id},
+    id::{
+        marker::{InteractionMarker, UserMarker},
+        Id,
+    },
 };
 
 use crate::types::cache::Guild;
@@ -18,6 +21,7 @@ pub struct ApplicationCommandInteraction<'a> {
     pub context: InteractionContext<'a>,
     pub data: Box<CommandData>,
     pub shard_id: u64,
+    pub user_id: Id<UserMarker>,
 }
 
 pub struct InteractionContext<'a> {

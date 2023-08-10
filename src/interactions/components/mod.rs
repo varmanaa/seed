@@ -1,2 +1,2 @@
-pub mod next;
-pub mod previous;
+pub mod leaderboard;
+pub mod level_roles;

@@ -1,6 +1,5 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
-use thousands::Separable;
 use tokio::time::sleep;
 use twilight_interactions::command::{CommandModel, CreateCommand};
 use twilight_model::channel::message::{
@@ -8,22 +7,21 @@ use twilight_model::channel::message::{
     Component,
     ReactionType,
 };
-use twilight_util::builder::embed::{EmbedBuilder, EmbedFooterBuilder};
+use twilight_util::builder::embed::{EmbedBuilder, EmbedFieldBuilder, EmbedFooterBuilder};
 
 use crate::types::{
-    cache::Member,
     context::Context,
     interaction::{ApplicationCommandInteraction, DeferInteractionPayload, UpdatePayload},
     Result,
 };
 
 #[derive(CommandModel, CreateCommand)]
-#[command(desc = "View the server's leaderboard", name = "leaderboard")]
-pub struct LeaderboardCommand {}
+#[command(desc = "View level roles", name = "view-level-roles")]
+pub struct ConfigViewLevelRolesCommand {}
 
-impl LeaderboardCommand {
+impl ConfigViewLevelRolesCommand {
     pub async fn run(
-        context: &Context,
+        _context: &Context,
         interaction: &ApplicationCommandInteraction<'_>,
     ) -> Result<()> {
         interaction
@@ -33,42 +31,13 @@ impl LeaderboardCommand {
             })
             .await?;
 
-        let mut leaderboard = interaction
-            .cached_guild
-            .member_ids
-            .read()
-            .iter()
-            .filter_map(|user_id| {
-                context
-                    .cache
-                    .get_member(interaction.cached_guild.guild_id, *user_id)
-            })
-            .collect::<Vec<Arc<Member>>>();
-
-        leaderboard.sort_unstable_by(|a, b| {
-            if !b.xp.read().eq(&*a.xp.read()) {
-                b.xp.read().cmp(&a.xp.read())
-            } else if !b
-                .last_message_timestamp
-                .read()
-                .eq(&a.last_message_timestamp.read())
-            {
-                b.last_message_timestamp
-                    .read()
-                    .cmp(&a.last_message_timestamp.read())
-            } else {
-                b.joined_voice_timestamp
-                    .read()
-                    .cmp(&a.joined_voice_timestamp.read())
-            }
-        });
-
+        let mut guild_levels = interaction.cached_guild.levels.read().clone();
         let mut embed_builder = EmbedBuilder::new()
             .color(0xF8F8FF)
-            .title(format!("{} leaderboard", interaction.cached_guild.name));
+            .title(format!("{} level role(s)", interaction.cached_guild.name));
 
-        if leaderboard.is_empty() {
-            embed_builder = embed_builder.description("There are no members with XP in this guild");
+        if guild_levels.is_empty() {
+            embed_builder = embed_builder.description("There are no level roles in this guild");
 
             interaction
                 .context
@@ -81,42 +50,34 @@ impl LeaderboardCommand {
             return Ok(());
         }
 
-        embed_builder = embed_builder.description(
-            leaderboard
-                .iter()
-                .take(10)
-                .enumerate()
-                .map(|(index, member)| {
-                    let rank = index + 1;
-                    let username = if member.discriminator == 0 {
-                        member.username.clone()
-                    } else {
-                        format!("{}#{:04}", member.username, member.discriminator)
-                    };
+        guild_levels.sort_unstable_by_key(|guild_level| guild_level.0);
 
-                    format!(
-                        "#{} - **{}** ({} XP)",
-                        rank,
-                        username,
-                        member.xp.read().separate_with_commas()
-                    )
-                })
-                .collect::<Vec<String>>()
-                .join("\n"),
-        );
+        for (level, role_ids) in guild_levels.iter().take(5) {
+            embed_builder = embed_builder.field(
+                EmbedFieldBuilder::new(
+                    format!("Level {level}"),
+                    role_ids
+                        .into_iter()
+                        .map(|role_id| format!("- <@&{role_id}>"))
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                )
+                .build(),
+            )
+        }
 
-        if leaderboard.len() > 10 {
+        if guild_levels.len() > 5 {
             embed_builder = embed_builder.footer(EmbedFooterBuilder::new(format!(
                 "Page 1 of {}",
-                (leaderboard.len() as f32 / 10.0).ceil()
+                (guild_levels.len() as f32 / 5.0).ceil()
             )))
         }
 
-        let components = if leaderboard.len() > 10 {
+        let components = if guild_levels.len() > 5 {
             vec![Component::ActionRow(ActionRow {
                 components: vec![
                     Component::Button(Button {
-                        custom_id: Some("leaderboard-previous".to_owned()),
+                        custom_id: Some("level-roles-previous".to_owned()),
                         disabled: false,
                         emoji: Some(ReactionType::Unicode {
                             name: "⬅️".to_owned(),
@@ -126,7 +87,7 @@ impl LeaderboardCommand {
                         url: None,
                     }),
                     Component::Button(Button {
-                        custom_id: Some("leaderboard-next".to_owned()),
+                        custom_id: Some("level-roles-next".to_owned()),
                         disabled: false,
                         emoji: Some(ReactionType::Unicode {
                             name: "➡️".to_owned(),

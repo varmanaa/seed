@@ -15,7 +15,7 @@ use crate::{
             leaderboard::LeaderboardCommand,
             rank::RankCommand,
         },
-        components::{next::NextComponent, previous::PreviousComponent},
+        components::{leaderboard::LeaderboardComponent, level_roles::LevelRolesComponent},
     },
     types::{
         context::Context,
@@ -39,6 +39,7 @@ pub async fn handle_interaction_create(
         data,
         guild_id,
         id,
+        member,
         message,
         token,
         ..
@@ -99,6 +100,7 @@ pub async fn handle_interaction_create(
                 context: interaction_context,
                 data,
                 shard_id,
+                user_id: member.unwrap().user.unwrap().id,
             };
             let command_name = take(&mut interaction.data.name);
 
@@ -123,18 +125,21 @@ pub async fn handle_interaction_create(
             };
         }
         Some(InteractionData::MessageComponent(data)) => {
-            let mut interaction = MessageComponentInteraction {
+            let interaction = MessageComponentInteraction {
                 cached_guild,
                 context: interaction_context,
                 data,
                 message: message.unwrap(),
                 shard_id,
             };
-            let component_name = take(&mut interaction.data.custom_id);
 
-            match component_name.as_str() {
-                "next" => NextComponent::run(&context, &interaction).await?,
-                "previous" => PreviousComponent::run(&context, &interaction).await?,
+            match interaction.data.custom_id.as_str() {
+                "leaderboard-next" | "leaderboard-previous" => {
+                    LeaderboardComponent::run(&context, &interaction).await?
+                }
+                "level-roles-next" | "level-roles-previous" => {
+                    LevelRolesComponent::run(&context, &interaction).await?
+                }
                 _ => {
                     interaction
                         .context

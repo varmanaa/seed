@@ -13,9 +13,9 @@ use crate::{
     utility::decimal::modulo,
 };
 
-pub struct NextComponent {}
+pub struct LeaderboardComponent {}
 
-impl NextComponent {
+impl LeaderboardComponent {
     pub async fn run(
         context: &Context,
         interaction: &MessageComponentInteraction<'_>,
@@ -54,7 +54,11 @@ impl NextComponent {
         });
 
         let total_pages = (leaderboard.len() as f32 / 10.0).ceil() as usize;
-        let new_index = modulo(current_index + 1, total_pages);
+        let new_index = if interaction.data.custom_id.as_str().ends_with("next") {
+            modulo(total_pages + current_index + 1, total_pages)
+        } else {
+            modulo(total_pages + current_index - 1, total_pages)
+        };
         let embed = EmbedBuilder::new()
             .color(0xF8F8FF)
             .description(
