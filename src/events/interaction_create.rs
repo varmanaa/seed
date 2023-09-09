@@ -51,12 +51,18 @@ pub async fn handle_interaction_create(
     };
     let embed_builder = EmbedBuilder::new().color(0xF8F8FF);
     let (Some(app_permissions), Some(guild_id)) = (app_permissions, guild_id) else {
-        return interaction_context.respond(ResponsePayload {
-            embeds: vec![embed_builder.description(format!("{} only works in guilds.", context.application_name)).build()],
-            ephemeral: true,
-            ..Default::default()
-        })
-        .await
+        return interaction_context
+            .respond(ResponsePayload {
+                embeds: vec![embed_builder
+                    .description(format!(
+                        "{} only works in guilds.",
+                        context.application_name
+                    ))
+                    .build()],
+                ephemeral: true,
+                ..Default::default()
+            })
+            .await;
     };
     let Some(cached_guild) = context.cache.get_guild(guild_id) else {
         return interaction_context
@@ -95,12 +101,14 @@ pub async fn handle_interaction_create(
 
     match data {
         Some(InteractionData::ApplicationCommand(data)) => {
+            let member = member.unwrap();
             let mut interaction = ApplicationCommandInteraction {
                 cached_guild,
                 context: interaction_context,
                 data,
                 shard_id,
-                user_id: member.unwrap().user.unwrap().id,
+                user_id: member.user.unwrap().id,
+                user_permissions: member.permissions,
             };
             let command_name = take(&mut interaction.data.name);
 
@@ -118,6 +126,7 @@ pub async fn handle_interaction_create(
                                     "I have received an unknown command with the name \"{}\".",
                                 )
                                 .build()],
+                            ephemeral: true,
                             ..Default::default()
                         })
                         .await?;
@@ -149,6 +158,7 @@ pub async fn handle_interaction_create(
                                     "I have received an unknown message component interaction with the name \"{}\".",
                                 )
                                 .build()],
+                            ephemeral: true,
                             ..Default::default()
                         })
                         .await?;

@@ -7,6 +7,7 @@ use twilight_model::{
         message_component::MessageComponentInteractionData,
     },
     channel::message::{Component, Embed, Message},
+    guild::Permissions,
     http::attachment::Attachment,
     id::{
         marker::{InteractionMarker, UserMarker},
@@ -22,6 +23,7 @@ pub struct ApplicationCommandInteraction<'a> {
     pub data: Box<CommandData>,
     pub shard_id: u64,
     pub user_id: Id<UserMarker>,
+    pub user_permissions: Option<Permissions>,
 }
 
 pub struct InteractionContext<'a> {

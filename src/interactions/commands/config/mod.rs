@@ -4,6 +4,8 @@ mod set_xp_multiplier;
 mod view_level_roles;
 
 use twilight_interactions::command::{CommandModel, CreateCommand};
+use twilight_model::guild::Permissions;
+use twilight_util::builder::embed::EmbedBuilder;
 
 use self::{
     add_level_role::ConfigAddLevelRoleCommand,
@@ -11,7 +13,11 @@ use self::{
     set_xp_multiplier::ConfigSetXpMultiplierCommand,
     view_level_roles::ConfigViewLevelRolesCommand,
 };
-use crate::types::{context::Context, interaction::ApplicationCommandInteraction, Result};
+use crate::types::{
+    context::Context,
+    interaction::{ApplicationCommandInteraction, ResponsePayload},
+    Result,
+};
 
 #[derive(CommandModel, CreateCommand)]
 #[command(desc = "Manage configuration", name = "config")]
@@ -31,18 +37,39 @@ impl ConfigCommand {
         context: &Context,
         interaction: &mut ApplicationCommandInteraction<'_>,
     ) -> Result<()> {
-        match ConfigCommand::from_interaction(interaction.input_data())? {
-            ConfigCommand::AddLevelRole(options) => {
-                ConfigAddLevelRoleCommand::run(context, interaction, options).await?
-            }
-            ConfigCommand::RemoveLevelRole(options) => {
-                ConfigRemoveLevelRoleCommand::run(context, interaction, options).await?
-            }
-            ConfigCommand::SetXpMultiplier(options) => {
-                ConfigSetXpMultiplierCommand::run(context, interaction, options).await?
-            }
-            ConfigCommand::ViewLevelRoles(_) => {
-                ConfigViewLevelRolesCommand::run(context, interaction).await?
+        if !interaction.user_permissions.map_or(false, |permissions| {
+            permissions.contains(Permissions::ADMINISTRATOR)
+        }) {
+            let embed = EmbedBuilder::new()
+                .color(0xF8F8FF)
+                .description(
+                    "You must be have administrator permissions in order to use this command."
+                        .to_owned(),
+                )
+                .build();
+
+            interaction
+                .context
+                .respond(ResponsePayload {
+                    embeds: vec![embed],
+                    ephemeral: true,
+                    ..Default::default()
+                })
+                .await?;
+        } else {
+            match ConfigCommand::from_interaction(interaction.input_data())? {
+                ConfigCommand::AddLevelRole(options) => {
+                    ConfigAddLevelRoleCommand::run(context, interaction, options).await?
+                }
+                ConfigCommand::RemoveLevelRole(options) => {
+                    ConfigRemoveLevelRoleCommand::run(context, interaction, options).await?
+                }
+                ConfigCommand::SetXpMultiplier(options) => {
+                    ConfigSetXpMultiplierCommand::run(context, interaction, options).await?
+                }
+                ConfigCommand::ViewLevelRoles(_) => {
+                    ConfigViewLevelRolesCommand::run(context, interaction).await?
+                }
             }
         }
 
