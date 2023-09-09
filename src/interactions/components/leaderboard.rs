@@ -29,9 +29,14 @@ impl LeaderboardComponent {
             .read()
             .iter()
             .filter_map(|user_id| {
-                context
+                let member = context
                     .cache
-                    .get_member(interaction.cached_guild.guild_id, *user_id)
+                    .get_member(interaction.cached_guild.guild_id, *user_id);
+
+                match member {
+                    Some(member) if member.xp.read().gt(&0) => Some(member),
+                    _ => None,
+                }
             })
             .collect::<Vec<Arc<Member>>>();
 
