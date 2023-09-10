@@ -37,7 +37,7 @@ impl ConfigViewLevelRolesCommand {
             .title(format!("{} level role(s)", interaction.cached_guild.name));
 
         if guild_levels.is_empty() {
-            embed_builder = embed_builder.description("There are no level roles in this guild");
+            embed_builder = embed_builder.description("There are no level roles in this guild.");
 
             interaction
                 .context
